@@ -41,9 +41,11 @@ def export_onnx(checkpoint_path: str, output_path: str):
     with open(index_path, "w", encoding="utf-8") as f:
         json.dump(class_index, f, indent=2, ensure_ascii=False)
 
+    val_acc = ckpt.get("val_acc")
+    val_acc_str = f"{val_acc:.4f}" if isinstance(val_acc, (int, float)) else "?"
     print(f"ONNX model   → {output_path}")
     print(f"Class index  → {index_path}")
-    print(f"Classes: {num_classes}  Val acc at export: {ckpt.get('val_acc', '?'):.4f}")
+    print(f"Classes: {num_classes}  Val acc at export: {val_acc_str}")
 
 
 if __name__ == "__main__":

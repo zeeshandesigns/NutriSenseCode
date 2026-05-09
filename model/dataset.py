@@ -49,7 +49,7 @@ class FoodDataset(Dataset):
             class_dir = Path(root) / label
             if not class_dir.exists():
                 continue
-            for img_path in class_dir.iterdir():
+            for img_path in sorted(class_dir.iterdir()):
                 if img_path.suffix.lower() in IMG_EXTS:
                     self.samples.append((str(img_path), idx))
 

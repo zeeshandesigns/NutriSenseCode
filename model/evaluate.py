@@ -30,6 +30,8 @@ from PIL import Image
 from sklearn.metrics import confusion_matrix
 from torch.utils.data import DataLoader
 
+from torch.utils.data import random_split
+
 from dataset import FoodDataset, get_transforms
 from gradcam import generate_gradcam
 from model import build_model
@@ -150,9 +152,16 @@ def main():
     model.load_state_dict(ckpt["state_dict"])
     model.to(device)
 
-    val_ds = FoodDataset(args.dataset_dir, class_index, augment=False)
+    full = FoodDataset(args.dataset_dir, class_index, augment=False)
+    val_size = int(len(full) * 0.2)
+    train_size = len(full) - val_size
+    _, val_ds = random_split(
+        full, [train_size, val_size],
+        generator=torch.Generator().manual_seed(42),
+    )
     val_loader = DataLoader(val_ds, batch_size=args.batch_size,
                             shuffle=False, num_workers=args.num_workers)
+    print(f"Eval set: {len(val_ds):,} images (held-out 20% split, seed=42)")
 
     print("Running evaluation…")
     preds, labels, top3_preds = run_eval(model, val_loader, device)
