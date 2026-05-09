@@ -111,7 +111,7 @@ RLS: users can only see their own rows in both tables
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 EXPO_PUBLIC_API_BASE_URL=https://nutrisense-api.onrender.com
-EXPO_PUBLIC_GEMINI_KEY=
+EXPO_PUBLIC_OPENROUTER_KEY=
 ```
 
 **Web** (`.env` in the web project root):
@@ -119,7 +119,7 @@ EXPO_PUBLIC_GEMINI_KEY=
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_API_BASE_URL=https://nutrisense-api.onrender.com
-VITE_GEMINI_KEY=
+VITE_OPENROUTER_KEY=
 ```
 
 ---
@@ -416,7 +416,7 @@ Layout (top to bottom):
 4. Divider
 5. `NutritionGrid` component
 6. Divider
-7. Gemini insight text (bodyMedium, lineHeight 22)
+7. AI insight text (bodyMedium, lineHeight 22)
 8. If `gradcam_sample_url` present: label "Model focus area" + image of heatmap
 9. If `!readOnly`: Share button that calls `Share.share({ message: "I ate X — Y kcal. Tracked with NutriSense AI." })`
 
@@ -524,7 +524,7 @@ Layout (horizontal row):
 
 **Goal:** Weekly nutrition patterns and an AI chatbot for food questions.
 
-**Why Gemini is called client-side for the chatbot:** The chatbot requires back-and-forth conversation history. Routing this through the Flask backend would add latency and complexity. Calling Gemini directly from the client is simpler and the free tier (15 RPM) is sufficient for FYP demo use.
+**Why OpenRouter is called client-side for the chatbot:** The chatbot requires back-and-forth conversation history. Routing this through the Flask backend would add latency and complexity. Calling OpenRouter directly from the client is simpler, and the Qwen free tier has no per-minute rate limit — sufficient for FYP demo use.
 
 ### Install additional packages
 
@@ -559,7 +559,7 @@ app/chatbot.tsx
 
 ### `app/chatbot.tsx`
 
-Chat screen with Gemini API called directly from the client.
+Chat screen with the OpenRouter (Qwen) chat-completions API called directly from the client.
 
 **System prompt construction (built silently, not shown to user):**
 ```
@@ -581,10 +581,11 @@ Tapping a suggestion sends it as the first message.
 
 **Input row:** TextInput + Send button. Disabled while loading. "Thinking…" placeholder bubble while waiting.
 
-**Gemini API call:**
-- URL: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${EXPO_PUBLIC_GEMINI_KEY}`
-- Pass full conversation history as `contents` array
-- `maxOutputTokens: 200`, `temperature: 0.7`
+**OpenRouter API call:**
+- URL: `https://openrouter.ai/api/v1/chat/completions`
+- Model: `qwen/qwen-2.5-72b-instruct`
+- Headers: `Authorization: Bearer ${EXPO_PUBLIC_OPENROUTER_KEY}`, `HTTP-Referer`, `X-Title`
+- Body: `{ model, messages: [{ role: 'system', content: <prompt> }, ...history], max_tokens: 200, temperature: 0.7 }` — OpenAI-compatible shape, alternates `user` and `assistant` roles
 - On error: show "Sorry, I could not reach the AI right now. Try again."
 
 ### Done when:
@@ -830,7 +831,7 @@ Shared layout for all private pages. Renders:
 
 ### `pages/Chatbot.tsx`
 
-Same logic as mobile chatbot. Same system prompt injection (load profile from Supabase). Same 4 suggested prompts. Same Gemini API call. Adapted for web: `flex flex-col`, scrollable message list, fixed input row at bottom.
+Same logic as mobile chatbot. Same system prompt injection (load profile from Supabase). Same 4 suggested prompts. Same OpenRouter API call. Adapted for web: `flex flex-col`, scrollable message list, fixed input row at bottom.
 
 ### `pages/Profile.tsx`
 
@@ -925,6 +926,6 @@ Run through this before the viva demo.
 | Image upload fails silently | Make sure `scan-images` bucket exists in Supabase Storage with public read access |
 | NutritionGrid crashes | Always check `typeof nutrition?.calories === 'number'` before rendering the grid |
 | History not updating after new scan | Use `useFocusEffect` not `useEffect` in history screen |
-| Chatbot sends wrong history format | Gemini `contents` array must alternate `user` and `model` roles — don't include the system prompt in history after the first turn |
+| Chatbot sends wrong history format | OpenRouter `messages` array must alternate `user` and `assistant` roles; the `system` message is sent once at the head of the array, not repeated |
 | Web upload not working | Ensure `content-type: multipart/form-data` is NOT manually set — let axios/fetch set it with the boundary |
 | Charts don't render on Insights | Check that you have ≥ 3 scans before the chart is rendered — suppress it otherwise |

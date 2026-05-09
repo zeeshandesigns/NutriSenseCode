@@ -69,7 +69,7 @@ Rules the frontend depends on:
 | Model | EfficientNetB0 | 5.3M params; CPU-deployable; 97.54% accuracy on Food-101 with fine-tuning (IJIIS 2024); best accuracy/size ratio vs MobileNetV2, ResNet50, EfficientNetB7 |
 | Inference runtime | ONNX Runtime (onnxruntime) | Faster than PyTorch at inference; ~200MB vs PyTorch's ~700MB; fits Render's 512MB free RAM |
 | API framework | Flask | Python-native; minimal overhead; ONNX runtime and image processing are Python libraries |
-| AI insights | Gemini gemini-1.5-flash | Free tier (15 RPM, 1M tokens/day); sufficient for FYP demo scale |
+| AI insights | OpenRouter — `qwen/qwen-2.5-72b-instruct` | Free tier with no per-minute rate limit; OpenAI-compatible API |
 | Nutrition data | Local JSON file | No API dependency; desi food values are more accurate when manually sourced; instant lookup |
 | Database/Auth | Supabase (PostgreSQL + Storage) | Shared with frontend; RLS handles data isolation; free tier |
 | Training | Kaggle Notebooks | Free GPU (P100/T4); Pakistani dataset already on Kaggle; notebooks persist |
@@ -86,7 +86,7 @@ Rules the frontend depends on:
 | Image input size | 224 × 224 | EfficientNetB0 standard; must match training preprocessing exactly |
 | ImageNet normalisation | mean=[0.485,0.456,0.406] std=[0.229,0.224,0.225] | Must match training transforms exactly or inference accuracy drops to near-zero |
 | Grad-CAM | Precomputed only | Do NOT load PyTorch in Flask — generates heatmaps during evaluation on Kaggle, uploads to Supabase Storage, serves as static URLs |
-| Gemini model string | `gemini-1.5-flash` | Use exactly this — not `gemini-pro` (paid) or `gemini-1.0` (outdated) |
+| OpenRouter model string | `qwen/qwen-2.5-72b-instruct` | Use exactly this — free-tier route on OpenRouter |
 | ONNX opset | 17 | Stable with onnxruntime 1.18+ |
 
 ---
@@ -98,7 +98,7 @@ backend/
 ├── app.py               Flask entry point
 ├── predict.py           ONNX inference
 ├── nutrition.py         Local JSON nutrition lookup
-├── insights.py          Gemini API call
+├── insights.py          OpenRouter (Qwen) API call
 ├── gradcam_api.py       Precomputed Grad-CAM URL lookup
 ├── config.py            Environment variable loading
 ├── routes/
@@ -135,7 +135,7 @@ data/
 
 ```bash
 # backend/.env
-GEMINI_API_KEY=
+OPENROUTER_API_KEY=
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
 MODEL_PATH=./model.onnx
@@ -511,7 +511,7 @@ backend/
 
 ### `config.py`
 
-Load all environment variables with `python-dotenv`. Fail fast if `GEMINI_API_KEY` is missing.
+Load all environment variables with `python-dotenv`. Fail fast if `OPENROUTER_API_KEY` is missing (unless `MOCK_MODE=true`).
 
 ```python
 import os
@@ -519,7 +519,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GEMINI_API_KEY       = os.environ["GEMINI_API_KEY"]   # raise KeyError if missing
+MOCK_MODE = os.environ.get("MOCK_MODE", "false").lower() == "true"
+
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+if not OPENROUTER_API_KEY and not MOCK_MODE:
+    raise RuntimeError("OPENROUTER_API_KEY is required (or set MOCK_MODE=true).")
+
 SUPABASE_URL         = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 MODEL_PATH           = os.environ.get("MODEL_PATH", "./model.onnx")
@@ -614,16 +619,14 @@ def get_nutrition(food_label: str) -> dict:
 
 ### `insights.py`
 
-Gemini API call with structured prompt. Goal context is injected silently — the user never sees it.
+OpenRouter (Qwen) chat-completions call with a structured prompt. Goal context is injected silently — the user never sees it.
 
 ```python
 import requests
-from config import GEMINI_API_KEY
+from config import OPENROUTER_API_KEY
 
-GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-)
+OPENROUTER_URL   = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "qwen/qwen-2.5-72b-instruct"
 
 GOAL_CONTEXT = {
     "weight_loss": "The user wants to lose weight — mention calorie density and whether this dish is light or heavy.",
@@ -631,34 +634,46 @@ GOAL_CONTEXT = {
     "curious":     "The user just wants to understand their food — give a balanced, informative explanation.",
 }
 
-SYSTEM = """You are a friendly, culturally-aware nutrition assistant for South Asian cuisine.
-Write exactly 2-3 sentences in plain English that:
-- Briefly describe what the dish is and what makes it nutritionally notable
-- Give one practical insight relevant to the user's goal
-- Use a warm, non-judgmental tone — never call food unhealthy or bad
-- Do not mention specific gram weights; use words like 'a good source of protein'"""
+SYSTEM_PROMPT = (
+    "You are a friendly, culturally-aware nutrition assistant for South Asian cuisine. "
+    "Write exactly 2-3 sentences in plain English that: "
+    "(1) briefly describe what the dish is and what makes it nutritionally notable, "
+    "(2) give one practical insight relevant to the user's goal. "
+    "Use a warm, non-judgmental tone. Never call food unhealthy or bad. "
+    "Do not mention specific gram weights; use phrases like 'a good source of protein'."
+)
 
 def generate_insight(food_label: str, nutrition: dict, user_goal: str = "curious") -> str:
     dish = food_label.replace("_", " ").title()
     goal_note = GOAL_CONTEXT.get(user_goal, GOAL_CONTEXT["curious"])
-    prompt = (
-        f"{SYSTEM}\n\n"
+    user_message = (
         f"Food: {dish}\n"
         f"Nutrition per serving: {nutrition.get('calories','?')} kcal, "
         f"{nutrition.get('protein','?')}g protein, "
         f"{nutrition.get('carbs','?')}g carbs, "
         f"{nutrition.get('fat','?')}g fat\n"
         f"Goal context: {goal_note}\n\n"
-        "Write the insight now:"
+        "Write the 2-3 sentence insight now:"
     )
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://nutrisense.vercel.app",
+        "X-Title": "NutriSense AI",
+    }
     payload = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 150, "temperature": 0.7},
+        "model": OPENROUTER_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": user_message},
+        ],
+        "max_tokens": 150,
+        "temperature": 0.7,
     }
     try:
-        resp = requests.post(GEMINI_URL, json=payload, timeout=10)
+        resp = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=15)
         resp.raise_for_status()
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception:
         return f"{dish} is a popular South Asian dish. Enjoy it as part of a balanced diet."
 ```
@@ -805,7 +820,8 @@ web: gunicorn app:app
 ### `.env.example`
 
 ```
-GEMINI_API_KEY=
+MOCK_MODE=true
+OPENROUTER_API_KEY=
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
 MODEL_PATH=./model.onnx
@@ -818,7 +834,7 @@ CONFIDENCE_THRESHOLD=0.70
 ### Done when:
 - `python app.py` starts without errors
 - `GET /health` returns `{"status": "ok", "model_loaded": true, "classes": 100}`
-- `POST /predict` with a food photo returns correct label, nutrition, and a Gemini insight
+- `POST /predict` with a food photo returns correct label, nutrition, and an AI-generated insight (OpenRouter/Qwen)
 - Postman test with a karahi photo returns confidence ≥ 0.70
 
 ---
@@ -917,7 +933,7 @@ Run through this before the viva demo.
 |---|---|
 | OOM on Render | Verify `requirements.txt` has no `torch` or `torchvision` — ONNX Runtime only |
 | Wrong predictions everywhere | Check ImageNet normalisation values exactly match training; verify 224×224 resize uses BILINEAR |
-| Gemini returns 429 | Free tier is 15 RPM; add a simple retry with 1s sleep |
+| OpenRouter returns 429 | Free tier route may be congested; add a simple retry with 1s sleep, or fall back to the canned insight |
 | ONNX export fails | Ensure `model.eval()` is called before export; use `opset_version=17` |
 | CORS errors from mobile | Expo dev client sends from `localhost` — ensure `"http://localhost:*"` is in CORS origins |
 | Supabase RLS blocks backend | Backend uses the `service_role` key (bypasses RLS); frontend uses the `anon` key (RLS applies) |

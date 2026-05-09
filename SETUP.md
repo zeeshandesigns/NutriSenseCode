@@ -11,7 +11,7 @@ Everything you need to do manually, in order. Code is already written — you ar
 | Service | URL | What it's for |
 |---|---|---|
 | Supabase | supabase.com | Database, Auth, Storage |
-| Google AI Studio | aistudio.google.com | Gemini API key |
+| OpenRouter | openrouter.ai | Qwen LLM API key (free tier) |
 | Render | render.com | Backend hosting |
 | Vercel | vercel.com | Web hosting |
 | Kaggle | kaggle.com | GPU training |
@@ -20,11 +20,11 @@ Everything you need to do manually, in order. Code is already written — you ar
 
 ## Stage 1 — Get all API keys before touching any code
 
-### 1.1 Gemini API Key
-1. Go to **aistudio.google.com**
-2. Click **Get API key** → **Create API key**
-3. `[KEY]` Copy it → call it `GEMINI_API_KEY`
-4. Free tier gives 15 requests/min, 1M tokens/day — enough for FYP
+### 1.1 OpenRouter API Key
+1. Go to **openrouter.ai** → Sign in (Google or GitHub auth)
+2. Click your avatar → **Keys** → **Create Key**
+3. `[KEY]` Copy it (starts with `sk-or-v1-...`) → call it `OPENROUTER_API_KEY`
+4. The Qwen model (`qwen/qwen-2.5-72b-instruct`) is free-tier and has no per-minute rate limit — sufficient for FYP demo and viva
 
 ### 1.2 Supabase Keys
 1. Go to **supabase.com** → New project (pick a region close to you)
@@ -116,7 +116,7 @@ cp .env.example .env
 Edit `backend/.env`:
 ```
 MOCK_MODE=true
-GEMINI_API_KEY=paste_your_gemini_key_here
+OPENROUTER_API_KEY=paste_your_openrouter_key_here
 SUPABASE_URL=paste_your_supabase_url_here
 SUPABASE_SERVICE_KEY=paste_your_service_role_key_here
 MODEL_PATH=../model.onnx
@@ -140,7 +140,7 @@ Edit `mobile/.env`:
 EXPO_PUBLIC_SUPABASE_URL=paste_your_supabase_url_here
 EXPO_PUBLIC_SUPABASE_ANON_KEY=paste_your_anon_key_here
 EXPO_PUBLIC_API_BASE_URL=http://YOUR_LOCAL_IP:5000
-EXPO_PUBLIC_GEMINI_KEY=paste_your_gemini_key_here
+EXPO_PUBLIC_OPENROUTER_KEY=paste_your_openrouter_key_here
 ```
 
 > For `API_BASE_URL`: use your computer's local IP (e.g. `http://192.168.1.5:5000`), not `localhost` — the phone can't reach localhost on your PC. Find your IP with `ipconfig` on Windows.
@@ -157,7 +157,7 @@ Edit `web/.env`:
 VITE_SUPABASE_URL=paste_your_supabase_url_here
 VITE_SUPABASE_ANON_KEY=paste_your_anon_key_here
 VITE_API_BASE_URL=http://localhost:5000
-VITE_GEMINI_KEY=paste_your_gemini_key_here
+VITE_OPENROUTER_KEY=paste_your_openrouter_key_here
 ```
 
 ---
@@ -299,17 +299,17 @@ Restart the backend and run `python test_api.py` — `model_loaded` should now b
    - **Start Command:** `gunicorn app:app`
    - **Instance Type:** Free
 4. **Environment Variables** → Add all keys from `backend/.env` (except MOCK_MODE — leave it false)
-5. **Disks** → Add a disk:
-   - Mount path: `/opt/render/project/src/data`
+5. **Disks** → Add a disk (or accept the one configured in `render.yaml`):
+   - Mount path: `/opt/render/project/src/backend/data`
    - Size: 1 GB
 6. Deploy → wait ~5 minutes for first deploy
 7. SSH into the disk (or use Render shell) and upload `model.onnx`:
    ```bash
    # In Render shell:
    # Upload model.onnx, class_index.json, nutrition_db.json, gradcam_index.json
-   # to /opt/render/project/src/data/
+   # to /opt/render/project/src/backend/data/
    ```
-   **Alternative (simpler):** Put all data files directly in `backend/data/` folder and push to git. The model.onnx is large (~20MB) so this works fine.
+   **Alternative (simpler):** Put all data files directly in `backend/data/` folder and push to git. The model.onnx is ~20MB so this works fine.
 
 8. Test: `curl https://YOUR_RENDER_URL.onrender.com/health`
    Should return: `{"status": "ok", "model_loaded": true, "classes": 100}`
@@ -379,7 +379,7 @@ Fill this in as you set things up:
 | Your PC's local IP | `ipconfig` → look for IPv4 under your WiFi adapter |
 | Supabase Project URL | |
 | Supabase Anon Key | |
-| Gemini API Key | |
+| OpenRouter API Key | |
 | Render Backend URL | |
 | Vercel Web URL | |
 
@@ -389,7 +389,7 @@ Fill this in as you set things up:
 
 | Error | Fix |
 |---|---|
-| `GEMINI_API_KEY is required` | Add GEMINI_API_KEY to `backend/.env` or set `MOCK_MODE=true` |
+| `OPENROUTER_API_KEY is required` | Add OPENROUTER_API_KEY to `backend/.env` or set `MOCK_MODE=true` |
 | Mobile can't reach backend | Use PC's local IP in `EXPO_PUBLIC_API_BASE_URL`, not localhost |
 | `model.onnx not found` | Either set `MOCK_MODE=true` or copy model.onnx to repo root |
 | Supabase insert fails | Check RLS policies were created — rerun the schema SQL |
