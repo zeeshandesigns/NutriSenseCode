@@ -9,12 +9,24 @@ import ResultCard from '../../../components/ResultCard'
 import { ScanResult } from '../../../lib/api'
 
 export default function ScanResultScreen() {
-  const { uri } = useLocalSearchParams<{ uri: string }>()
+  const { uri, result: resultParam } = useLocalSearchParams<{ uri: string; result?: string }>()
   const router = useRouter()
   const [result, setResult] = useState<ScanResult | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { if (uri) run() }, [uri])
+  useEffect(() => {
+    if (!uri) return
+    if (resultParam) {
+      try {
+        const confirmed = JSON.parse(resultParam) as ScanResult
+        setResult(confirmed)
+        setLoading(false)
+        supabase.auth.getUser().then(({ data: { user } }) => saveScan(confirmed, uri, user?.id))
+        return
+      } catch { /* fall through to fresh predict */ }
+    }
+    run()
+  }, [uri, resultParam])
 
   async function run() {
     try {

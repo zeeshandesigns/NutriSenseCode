@@ -34,10 +34,20 @@ export default function Today() {
       setResult(data)
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        let image_url: string | null = null
+        try {
+          const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+          const fileName = `${user.id}/${Date.now()}.${ext}`
+          const { error: upErr } = await supabase.storage
+            .from('scan-images').upload(fileName, file, { contentType: file.type })
+          if (!upErr) {
+            image_url = supabase.storage.from('scan-images').getPublicUrl(fileName).data.publicUrl
+          }
+        } catch (_) { /* non-fatal */ }
         await supabase.from('scans').insert({
           user_id: user.id, food_label: data.top_prediction.label,
           confidence: data.top_prediction.confidence, top_3: data.top_3,
-          nutrition: data.nutrition, insight: data.insight,
+          nutrition: data.nutrition, insight: data.insight, image_url,
         })
       }
     } catch (e: any) {

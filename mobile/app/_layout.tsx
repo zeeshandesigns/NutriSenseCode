@@ -25,8 +25,13 @@ export default function RootLayout() {
     if (session === undefined) return // still loading
     const inAuth = segments[0] === 'auth'
     const inOnboarding = segments[0] === 'onboarding'
-    if (!session && !inAuth) { router.replace('/auth/login'); return }
-    if (session && inAuth) router.replace('/(tabs)/scan')
+    if (!session) { if (!inAuth) router.replace('/auth/login'); return }
+    if (inAuth) { router.replace('/(tabs)/scan'); return }
+    if (inOnboarding) return // user is mid-onboarding; don't interfere
+    supabase.from('profiles').select('onboarding_complete').eq('id', session.user.id).maybeSingle()
+      .then(({ data }) => {
+        if (data && !data.onboarding_complete) router.replace('/onboarding/goal')
+      })
   }, [session, segments])
 
   if (session === undefined) return null // loading splash

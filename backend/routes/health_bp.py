@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from predict import _session, get_class_index
+from predict import get_class_index, is_model_loaded
 
 health_bp = Blueprint("health", __name__)
 
@@ -8,6 +8,6 @@ health_bp = Blueprint("health", __name__)
 def health():
     return jsonify({
         "status": "ok",
-        "model_loaded": _session is not None,
+        "model_loaded": is_model_loaded(),
         "classes": len(get_class_index()),
     })

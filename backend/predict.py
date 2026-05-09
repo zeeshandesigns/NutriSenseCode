@@ -112,3 +112,7 @@ def run_inference(image_bytes: bytes) -> dict:
 
 def get_class_index() -> dict:
     return _class_index
+
+
+def is_model_loaded() -> bool:
+    return _session is not None
