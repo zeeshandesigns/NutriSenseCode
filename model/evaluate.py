@@ -38,6 +38,16 @@ from model import build_model
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
+# South-Asian class labels — Grad-CAM sampling prioritises these so the
+# demo always shows attention maps for desi food, not random Western dishes.
+SOUTH_ASIAN_CLASSES = {
+    "aloo_paratha", "anda_paratha", "biryani", "bun_kebab", "channay",
+    "chapli_kebab", "chicken_karahi", "daal", "dahi_bhalla", "doodh_patti",
+    "gol_gappa", "gulab_jamun", "haleem", "halwa_puri", "jalebi", "karahi",
+    "kheer", "naan_bread", "nihari_lahori", "paya", "rabri", "sajji",
+    "samosa", "shami_kebab", "suji_halwa",
+}
+
 
 @torch.no_grad()
 def run_eval(model, loader, device):
@@ -97,18 +107,23 @@ def generate_gradcam_samples(model, dataset_dir, class_index, output_dir, n=15):
     os.makedirs(gc_dir, exist_ok=True)
 
     label_to_idx = {v: int(k) for k, v in class_index.items()}
-    samples = []
+    sa_samples, other_samples = [], []
     for label, idx in label_to_idx.items():
         class_dir = pathlib.Path(dataset_dir) / label
         if class_dir.exists():
             imgs = [p for p in class_dir.iterdir() if p.suffix.lower() in IMG_EXTS]
             if imgs:
-                samples.append((random.choice(imgs), label, idx))
+                entry = (random.choice(imgs), label, idx)
+                (sa_samples if label in SOUTH_ASIAN_CLASSES else other_samples).append(entry)
 
-    random.shuffle(samples)
+    random.shuffle(sa_samples)
+    random.shuffle(other_samples)
+    # Prioritise South-Asian classes; fill remainder with others
+    selected = sa_samples[:n] + other_samples[: max(0, n - len(sa_samples))]
+    print(f"  Grad-CAM picks: {len(selected)} total ({sum(1 for s in selected if s[1] in SOUTH_ASIAN_CLASSES)} South Asian)")
     model_cpu = model.cpu()
 
-    for img_path, label, idx in samples[:n]:
+    for img_path, label, idx in selected:
         try:
             img = Image.open(img_path).convert("RGB")
             overlay = generate_gradcam(model_cpu, img, target_class=idx)
