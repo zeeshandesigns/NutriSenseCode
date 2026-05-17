@@ -23,10 +23,24 @@ build/
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE / tooling
 .vscode/settings.json
 .idea/
+.claude/
 
 # Logs
 *.log
 npm-debug.log*
+
+# Kaggle outputs (large + transient)
+kaggle_outputs/
+
+# Private / internal docs — keep local, not for public repo
+SETUP.md
+docs/SRS.md
+docs/CONTEXT.md
+docs/BACKEND.md
+docs/FRONTEND.md
+docs/KAGGLE.md
+docs/TEST_CASES.md
+docs/TESTING.md
