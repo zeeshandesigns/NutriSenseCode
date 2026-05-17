@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { useEffect, useRef, useState } from 'react'
+import { Send, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 
 interface Message { role: 'user' | 'assistant'; text: string }
 
@@ -15,6 +17,7 @@ const OPENROUTER_URL   = 'https://openrouter.ai/api/v1/chat/completions'
 const OPENROUTER_MODEL = 'qwen/qwen-2.5-72b-instruct'
 
 export default function Chatbot() {
+  const { user } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,11 +26,9 @@ export default function Chatbot() {
   const apiKey = import.meta.env.VITE_OPENROUTER_KEY
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) supabase.from('profiles').select('*').eq('id', user.id).single()
-        .then(({ data }) => setProfile(data))
-    })
-  }, [])
+    if (user) supabase.from('profiles').select('*').eq('id', user.id).single()
+      .then(({ data }) => setProfile(data))
+  }, [user])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -79,43 +80,62 @@ export default function Chatbot() {
   }
 
   return (
-    <div className="flex flex-col h-[72vh]">
-      <h1 className="text-2xl font-bold mb-4">Ask about your diet</h1>
-      <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
+    <div className="flex flex-col h-[75vh] bg-white rounded-2xl border shadow-sm overflow-hidden">
+      <div className="bg-brand-700 text-white p-4 flex items-center gap-2">
+        <Sparkles className="h-5 w-5" />
+        <div>
+          <h1 className="font-semibold">Ask NutriSense AI</h1>
+          <p className="text-xs text-brand-100">Your personal South Asian food assistant</p>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {!messages.length && (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-400 mb-3">Try asking:</p>
-            {SUGGESTED.map(q => (
-              <button key={q} onClick={() => send(q)}
-                className="block w-full text-left text-sm border rounded-lg px-3 py-2 hover:bg-brand-50 transition-colors">
-                {q}
-              </button>
-            ))}
+          <div className="text-center py-6">
+            <Sparkles className="h-10 w-10 text-brand-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500 mb-4">Ask me anything about South Asian food and nutrition</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {SUGGESTED.map(q => (
+                <button key={q} onClick={() => send(q)}
+                  className="bg-gray-100 hover:bg-brand-50 hover:text-brand-700 text-gray-700 px-3 py-1.5 rounded-full text-xs transition-colors">
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
+
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-sm rounded-2xl px-4 py-2 text-sm ${
-              m.role === 'user' ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-800'
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+              m.role === 'user'
+                ? 'bg-brand-700 text-white rounded-br-sm'
+                : 'bg-gray-100 text-gray-800 rounded-bl-sm'
             }`}>
               {m.text}
             </div>
           </div>
         ))}
+
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-2xl px-4 py-2 text-sm text-gray-400">Thinking…</div>
+            <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-2 text-sm text-gray-400">Thinking…</div>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={e => { e.preventDefault(); send(input) }} className="flex gap-2">
-        <input value={input} onChange={e => setInput(e.target.value)}
+
+      <form onSubmit={e => { e.preventDefault(); send(input) }} className="border-t p-3 flex gap-2">
+        <input
+          value={input} onChange={e => setInput(e.target.value)}
           placeholder="Ask about your food…"
-          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          disabled={loading}
+        />
         <button type="submit" disabled={loading || !input.trim()}
-          className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 hover:bg-brand-800">
-          Send
+          className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 hover:bg-brand-800 flex items-center gap-1 transition-colors">
+          <Send size={16} />
+          <span className="hidden sm:inline">Send</span>
         </button>
       </form>
     </div>

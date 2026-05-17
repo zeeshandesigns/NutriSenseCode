@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
+import { Upload, Loader2 } from 'lucide-react'
 
 interface Props { onFile: (f: File) => void; loading: boolean }
 
@@ -10,19 +11,23 @@ export default function UploadZone({ onFile, loading }: Props) {
   })
 
   return (
-    <div {...getRootProps()} className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-colors ${
-      loading ? 'opacity-50 cursor-not-allowed border-gray-300'
+    <div {...getRootProps()} className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-colors bg-white ${
+      loading ? 'opacity-60 cursor-not-allowed border-gray-300'
       : isDragActive ? 'border-brand-500 bg-brand-50'
-      : 'border-gray-300 hover:border-brand-400 hover:bg-gray-50'
+      : 'border-gray-300 hover:border-brand-400 hover:bg-brand-50/30'
     }`}>
       <input {...getInputProps()} />
-      <div className="text-4xl mb-3">{loading ? '⏳' : '📸'}</div>
-      <p className="text-sm text-gray-500">
+      {loading ? (
+        <Loader2 className="h-12 w-12 text-brand-600 mx-auto mb-3 animate-spin" />
+      ) : (
+        <Upload className="h-12 w-12 text-brand-500 mx-auto mb-3" />
+      )}
+      <p className="text-base font-semibold text-gray-700">
         {loading ? 'Analysing your food…'
           : isDragActive ? 'Drop the photo here'
           : 'Drag a food photo here, or click to select'}
       </p>
-      <p className="text-xs text-gray-400 mt-1">JPG or PNG</p>
+      <p className="text-xs text-gray-400 mt-1">JPG or PNG · max 5MB</p>
     </div>
   )
 }

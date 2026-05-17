@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
+import { Camera, Brain, ClipboardList, UtensilsCrossed, ChevronRight } from 'lucide-react'
 
 const STEPS = [
-  { icon: '📸', title: 'Snap', desc: 'Point your camera at any South Asian dish' },
-  { icon: '🧠', title: 'Identify', desc: 'EfficientNetB0 CNN classifies from 100 food classes' },
-  { icon: '📋', title: 'Understand', desc: 'Get nutrition facts and a plain-language insight instantly' },
+  { icon: Camera,        title: 'Snap',       desc: 'Point your camera at any South Asian dish' },
+  { icon: Brain,         title: 'Identify',   desc: 'EfficientNetB0 CNN classifies from 100 food classes' },
+  { icon: ClipboardList, title: 'Understand', desc: 'Get nutrition facts and a plain-language insight instantly' },
 ]
 
 const ABLATION = [
@@ -14,34 +15,40 @@ const ABLATION = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="flex items-center justify-between px-8 py-4 border-b">
-        <span className="font-bold text-brand-700 text-xl tracking-tight">NutriSense AI</span>
-        <Link to="/login" className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-800 transition-colors">
-          Get Started
+    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white">
+      <nav className="flex items-center justify-between px-8 py-4 border-b bg-white/70 backdrop-blur">
+        <div className="flex items-center gap-2">
+          <UtensilsCrossed className="h-5 w-5 text-brand-700" />
+          <span className="font-bold text-brand-700 text-xl tracking-tight">NutriSense AI</span>
+        </div>
+        <Link to="/login" className="inline-flex items-center gap-1 bg-brand-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-800 transition-colors">
+          Get Started <ChevronRight size={16} />
         </Link>
       </nav>
 
       <section className="max-w-3xl mx-auto px-8 py-20 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">
-          Know your desi food — instantly
+        <UtensilsCrossed className="h-16 w-16 text-brand-700 mx-auto mb-4" />
+        <h1 className="text-5xl font-bold text-gray-900 mb-4 leading-tight">
+          Know your desi food — <span className="text-brand-700">instantly</span>
         </h1>
         <p className="text-lg text-gray-500 mb-8 max-w-xl mx-auto">
           NutriSense AI recognises Pakistani and South Asian dishes from a single photo.
           No manual entry. No guessing. Point, snap, understand.
         </p>
-        <Link to="/login" className="bg-brand-700 text-white px-8 py-3 rounded-lg text-base hover:bg-brand-800 transition-colors inline-block">
-          Try It Free
+        <Link to="/login" className="inline-flex items-center gap-2 bg-brand-700 text-white px-8 py-3 rounded-lg text-base font-semibold hover:bg-brand-800 transition-colors">
+          Try It Free <ChevronRight size={18} />
         </Link>
       </section>
 
-      <section className="bg-gray-50 py-16">
+      <section className="bg-white py-16 border-y">
         <div className="max-w-3xl mx-auto px-8">
           <h2 className="text-2xl font-bold text-center mb-10">How it works</h2>
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {STEPS.map(s => (
               <div key={s.title} className="text-center">
-                <div className="text-4xl mb-3">{s.icon}</div>
+                <div className="bg-brand-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <s.icon className="h-8 w-8 text-brand-700" />
+                </div>
                 <h3 className="font-semibold mb-1">{s.title}</h3>
                 <p className="text-sm text-gray-500">{s.desc}</p>
               </div>
