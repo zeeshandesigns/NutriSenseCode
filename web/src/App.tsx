@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import Onboarding from './pages/Onboarding'
 import DashboardLayout from './pages/DashboardLayout'
 import Today from './pages/Today'
 import History from './pages/History'
@@ -22,6 +23,11 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<LoginRoute />} />
+        <Route path="/onboarding" element={
+          <ProtectedRoute allowDuringOnboarding>
+            <Onboarding />
+          </ProtectedRoute>
+        } />
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Today />} />
           <Route path="/history"   element={<History />} />
