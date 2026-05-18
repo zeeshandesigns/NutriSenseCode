@@ -32,6 +32,19 @@ NutriSense AI fills the gap with a fine-tuned EfficientNetB0 trained on a curate
 
 No manual entry. No calorie counting. No meal plans. Just snap → understand.
 
+## Screenshots
+
+<!-- TODO: add real screenshots — capture during pre-viva dry run -->
+
+| Mobile (Android / iOS via Expo) | Web (Vercel) |
+|---|---|
+| `docs/screenshots/mobile-scan.png` | `docs/screenshots/web-dashboard.png` |
+| `docs/screenshots/mobile-result.png` | `docs/screenshots/web-history.png` |
+| `docs/screenshots/mobile-history.png` | `docs/screenshots/web-insights.png` |
+
+[Demo video](https://www.youtube.com/) <!-- replace with real link -->
+| [Live web app](https://nutrisense.vercel.app) <!-- replace with real URL -->
+
 ## Architecture
 
 ```
@@ -221,9 +234,47 @@ The model is trained on Kaggle GPU. See [`model/nutrisense_training.ipynb`](mode
 
 ## Deployment
 
-- **Backend** → Render (configured in [`render.yaml`](render.yaml))
-- **Web** → Vercel (root directory: `web`, framework: Vite)
-- **Mobile** → EAS build (`eas build -p android --profile preview`)
+### Backend → Render
+
+The repo includes [`render.yaml`](render.yaml) for one-click Render deploys.
+
+1. Push `main` to GitHub
+2. Render dashboard → **New +** → **Web Service** → connect this repo
+3. Settings are auto-detected from `render.yaml`
+4. Set these env vars in the Render dashboard (marked `sync: false`):
+   - `OPENROUTER_API_KEY`
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_KEY`
+5. First deploy takes ~5 min (cold-start)
+6. Verify: `curl https://<your-app>.onrender.com/health` → `{"model_loaded": true}`
+
+### Web → Vercel
+
+1. Vercel dashboard → **Add New Project** → import this repo
+2. **Root directory:** `web` · **Framework preset:** Vite (auto-detected)
+3. Env vars (Settings → Environment Variables):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_API_BASE_URL` (set to the Render URL from above)
+   - `VITE_OPENROUTER_KEY` (only needed if the chatbot should work)
+4. Deploys automatically on every `git push origin main`
+
+### Mobile → EAS Android APK
+
+For demo/sharing, build a standalone APK that doesn't need Expo Go:
+
+```bash
+cd mobile
+npm install -g eas-cli
+eas login                              # uses your Expo account
+eas build:configure                    # one-time — creates eas.json
+eas build --platform android --profile preview
+```
+
+Build runs on Expo's servers (~10-15 min). Returns a download URL for the APK.
+Install on any Android phone via "Install unknown apps". Make sure
+`EXPO_PUBLIC_API_BASE_URL` is set to the **Render production URL** before
+building, otherwise the APK will look for a local-network backend.
 
 ## License
 
