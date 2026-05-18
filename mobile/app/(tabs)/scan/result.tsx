@@ -1,7 +1,7 @@
 import * as ImageManipulator from 'expo-image-manipulator'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { Alert, ScrollView, StyleSheet, View } from 'react-native'
+import { Alert, Image, ScrollView, StyleSheet, View } from 'react-native'
 import { ActivityIndicator, Text } from 'react-native-paper'
 import { predictImage } from '../../../lib/api'
 import { supabase } from '../../../lib/supabase'
@@ -56,7 +56,10 @@ export default function ScanResultScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       {loading && (
         <View style={styles.loading}>
-          <ActivityIndicator size="large" />
+          {uri ? (
+            <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
+          ) : null}
+          <ActivityIndicator size="large" style={{ marginTop: 20 }} />
           <Text style={{ opacity: 0.6, marginTop: 12 }}>Analysing your food…</Text>
         </View>
       )}
@@ -97,5 +100,6 @@ async function saveScan(data: ScanResult, uri: string, userId?: string) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 16 },
-  loading:   { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
+  loading:   { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+  preview:   { width: '90%', height: 220, borderRadius: 16 },
 })

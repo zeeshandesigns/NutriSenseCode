@@ -35,3 +35,14 @@ export async function predictImage(uri: string, userGoal: string): Promise<ScanR
 export function displayLabel(label: string): string {
   return label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
+
+export async function lookupLabel(
+  label: string,
+  userGoal: string,
+): Promise<{ nutrition: Nutrition; insight: string }> {
+  const { data } = await axios.get<{ label: string; nutrition: Nutrition; insight: string }>(
+    `${BASE}/lookup`,
+    { params: { label, user_goal: userGoal }, timeout: 15000 },
+  )
+  return { nutrition: data.nutrition, insight: data.insight }
+}
