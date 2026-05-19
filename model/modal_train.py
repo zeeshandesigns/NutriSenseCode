@@ -17,8 +17,13 @@ Usage:
         KAGGLE_USERNAME=<your-username> \\
         KAGGLE_KEY=<your-classic-token>                # one-time secret
 
-    modal run model/modal_train.py::setup_datasets     # first time only (~30-60 min)
-    modal run model/modal_train.py::train_pipeline     # ~4-6 hrs
+    modal run --detach model/modal_train.py::setup_datasets     # first time only (~30-60 min)
+    modal run --detach model/modal_train.py::train_pipeline     # ~4-6 hrs
+
+    # --detach is critical for long runs: it tells Modal to keep the function
+    # running even if your local terminal disconnects (Wi-Fi blip, laptop sleep,
+    # closing the shell, etc.). Without --detach, any local disconnect cancels
+    # the run mid-flight. We learned this the hard way.
 
     # Fetch outputs to your machine:
     modal volume get nutrisense /model.onnx                   ./outputs/
