@@ -26,6 +26,12 @@ import os
 import shutil
 from pathlib import Path
 
+# Modal Volume copies are slow (~3 files/sec for many small files).
+# Symlinks are O(1) regardless of file count and PIL/torchvision read
+# through them transparently. Falls back to copy on filesystems that
+# don't support symlinks (e.g. Windows without dev mode).
+USE_SYMLINKS = os.environ.get("CURATE_USE_SYMLINKS", "1") == "1"
+
 # Maps non-canonical source names → canonical label used in training
 ALIAS_MAP = {
     "fried_rice":     "biryani",
@@ -60,9 +66,16 @@ def copy_images(src: Path, dest: Path, label: str) -> int:
     for img in src.iterdir():
         if img.suffix.lower() in IMG_EXTS:
             dst_path = dest / f"{label}_{img.stem}{img.suffix}"
-            if not dst_path.exists():
+            if dst_path.exists() or dst_path.is_symlink():
+                continue
+            if USE_SYMLINKS:
+                try:
+                    os.symlink(img.resolve(), dst_path)
+                except OSError:
+                    shutil.copy2(img, dst_path)
+            else:
                 shutil.copy2(img, dst_path)
-                count += 1
+            count += 1
     return count
 
 

@@ -2,10 +2,11 @@
 NutriSense AI — Modal training pipeline.
 
 Runs the full Kaggle-equivalent flow (curate → train → ablate → evaluate → export)
-on Modal's GPU infrastructure. No 12-hour session cap, no flaky web UI.
+on Modal's infrastructure. No 12-hour session cap, no flaky web UI.
 
-Estimated cost on A10G ($1.10/hr) for the full pipeline:
-    setup_datasets   ~30-60 min CPU   (~$0.20)
+Estimated cost per stage:
+    setup_datasets   ~30-60 min CPU   (~$0.20)        — once per Volume
+    curate           ~5-10 min CPU    (~$0.05)         — symlinks, fast
     train_pipeline   ~4-6 hrs A10G    (~$5-7)
                                       ─────
                                       ~$5.50-7.50 total
@@ -18,12 +19,20 @@ Usage:
         KAGGLE_KEY=<your-classic-token>                # one-time secret
 
     modal run --detach model/modal_train.py::setup_datasets     # first time only (~30-60 min)
-    modal run --detach model/modal_train.py::train_pipeline     # ~4-6 hrs
+    modal run --detach model/modal_train.py::curate              # ~5-10 min CPU
+    modal run --detach model/modal_train.py::train_pipeline      # ~4-6 hrs GPU
 
     # --detach is critical for long runs: it tells Modal to keep the function
     # running even if your local terminal disconnects (Wi-Fi blip, laptop sleep,
     # closing the shell, etc.). Without --detach, any local disconnect cancels
     # the run mid-flight. We learned this the hard way.
+
+    # curate is split out of train_pipeline because:
+    # 1. It's CPU work only — running it on A10G wasted ~$1/hr while we waited.
+    # 2. The first attempt had curate burn 90 min before we caught that
+    #    shutil.copy2 across 264K files on a Modal Volume is glacially slow
+    #    (~3 files/sec = ~23 hours). curate_classes.py now uses os.symlink
+    #    which is O(1) per file.
 
     # Fetch outputs to your machine:
     modal volume get nutrisense /model.onnx                   ./outputs/
@@ -51,7 +60,8 @@ DATASETS = [
 # ── Container images ────────────────────────────────────────────────────────
 cpu_image = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install("kaggle>=1.6.0")
+    .apt_install("git")
+    .pip_install("kaggle>=1.6.0", "Pillow>=10.0.0", "numpy<2.0", "pandas>=2.2.0")
 )
 
 gpu_image = (
@@ -103,7 +113,6 @@ def setup_datasets():
 
     for slug, dest_path in DATASETS:
         dest = raw_dir / dest_path
-        # Skip if directory exists and is non-empty
         if dest.exists() and any(dest.iterdir()):
             size_mb = sum(f.stat().st_size for f in dest.rglob("*") if f.is_file()) / 1e6
             print(f"  ✓ Already present: {slug}  ({size_mb:,.0f} MB)")
@@ -122,21 +131,20 @@ def setup_datasets():
     print("\nAll datasets staged in /data/raw/")
 
 
-# ── Step 2: end-to-end training pipeline on a GPU ──────────────────────────
+# ── Step 2: curate unified dataset (CPU only — symlinks, fast) ─────────────
 @app.function(
-    image=gpu_image,
-    gpu="A10G",                       # A100 or H100 for faster (and more $$$)
+    image=cpu_image,
     volumes={"/data": volume},
-    timeout=10 * 60 * 60,             # 10 hr cap; pipeline expected ~4-6 hrs
+    timeout=2 * 60 * 60,
     cpu=4.0,
-    memory=16384,
+    memory=4096,
 )
-def train_pipeline():
-    """End-to-end: curate → train → ablate → evaluate → export ONNX."""
-    import glob, os, re, subprocess
+def curate():
+    """Build the unified_dataset using symlinks. ~5-10 min for 264K files."""
+    import os, subprocess
     from pathlib import Path
 
-    # 1. Pull latest model/ scripts from GitHub
+    # Clone the latest curate_classes.py
     code_dir = Path("/tmp/nutrisense")
     if not code_dir.exists():
         print("Cloning repo…")
@@ -146,55 +154,93 @@ def train_pipeline():
         )
     model_dir = code_dir / "model"
 
-    # 2. Define paths
-    raw     = Path("/data/raw")
-    unified = "/data/unified_dataset"
-    work    = "/data"
-    eval_d  = "/data/evaluation"
-    ckpts   = "/data/checkpoints"
-    for d in [unified, eval_d, ckpts]:
-        os.makedirs(d, exist_ok=True)
-
+    raw = Path("/data/raw")
     food101 = str(raw / "kmader/food41/images")
     khana   = str(raw / "kashyap077/indian-food/Images")
     deshi   = str(raw / "shaidurpranto/deshifoodbd/food_data_english/food_data_english/images")
     scraped = str(raw / "sameen03/nutrisense-scraped/scraped")
 
-    # 3. Sanity-check paths before burning GPU time
     print("=== Path verification ===")
-    all_ok = True
     for name, p in [("FOOD101", food101), ("KHANA", khana),
                     ("DESHI",  deshi),    ("SCRAPED", scraped)]:
         ok = os.path.exists(p)
         print(f"  {'✓' if ok else '✗ MISSING'}  {name}: {p}")
-        all_ok = all_ok and ok
-    if not all_ok:
-        raise RuntimeError("Some dataset paths missing — run `setup_datasets` first")
+        if not ok:
+            raise RuntimeError(f"Missing input: {p} — run setup_datasets first")
 
-    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    unified = "/data/unified_dataset"
+    os.makedirs(unified, exist_ok=True)
+
+    env = {**os.environ, "PYTHONUNBUFFERED": "1", "CURATE_USE_SYMLINKS": "1"}
+
+    print("\n=== Curating with symlinks ===")
+    subprocess.run([
+        "python", "-u", str(model_dir / "curate_classes.py"),
+        "--food101",    food101,
+        "--khana",      khana,
+        "--deshi",      deshi,
+        "--scraped",    scraped,
+        "--output",     unified,
+        "--min_images", "100",
+    ], check=True, env=env)
+
+    volume.commit()
+
+    # Summary
+    classes = sorted(os.listdir(unified))
+    total = sum(len(os.listdir(os.path.join(unified, c))) for c in classes
+                if os.path.isdir(os.path.join(unified, c)))
+    print(f"\n✓ Curate complete: {len(classes)} classes, {total:,} total entries")
+
+
+# ── Step 3: train, ablate, evaluate, export — pure GPU work ────────────────
+@app.function(
+    image=gpu_image,
+    gpu="A10G",                       # A100 or H100 for faster (and more $$$)
+    volumes={"/data": volume},
+    timeout=10 * 60 * 60,             # 10 hr cap
+    cpu=4.0,
+    memory=16384,
+)
+def train_pipeline():
+    """Train → Ablate → Evaluate → Export ONNX. Assumes `curate` has already run."""
+    import glob, os, re, subprocess
+    from pathlib import Path
+
+    code_dir = Path("/tmp/nutrisense")
+    if not code_dir.exists():
+        print("Cloning repo…")
+        subprocess.run(
+            ["git", "clone", "--depth", "1", REPO_URL, str(code_dir)],
+            check=True,
+        )
+    model_dir = code_dir / "model"
+
+    unified = "/data/unified_dataset"
+    work    = "/data"
+    eval_d  = "/data/evaluation"
+    ckpts   = "/data/checkpoints"
+    for d in [eval_d, ckpts]:
+        os.makedirs(d, exist_ok=True)
+
     class_index = f"{work}/class_index.json"
 
-    # 4. Curate ──────────────────────────────────────────────────────────────
-    print("\n=== Step 1/5: Curating datasets ===")
-    subprocess.run([
-        "python", str(model_dir / "curate_classes.py"),
-        "--food101",     food101,
-        "--khana",       khana,
-        "--deshi",       deshi,
-        "--scraped",     scraped,
-        "--output",      unified,
-        "--min_images",  "100",
-    ], check=True, env=env)
-    volume.commit()  # snapshot in case training crashes
+    # Sanity checks
+    if not os.path.exists(unified) or not os.listdir(unified):
+        raise RuntimeError("unified_dataset is empty — run `curate` first")
+    if not os.path.exists(class_index):
+        raise RuntimeError(f"{class_index} not found — run `curate` first")
 
-    # 5. Train (two-phase) ───────────────────────────────────────────────────
-    print("\n=== Step 2/5: Two-phase training ===")
+    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+
+    # 1. Train (two-phase) ───────────────────────────────────────────────────
+    print("\n=== Step 1/4: Two-phase training ===")
     subprocess.run([
-        "python", str(model_dir / "train.py"),
+        "python", "-u", str(model_dir / "train.py"),
         "--dataset_dir",   unified,
         "--class_index",   class_index,
         "--output_dir",    ckpts,
-        "--batch_size",    "64",        # bigger batch — A10G has 24 GB
+        "--batch_size",    "64",         # bigger batch — A10G has 24 GB
         "--phase1_epochs", "5",
         "--phase2_epochs", "15",
         "--patience",      "3",
@@ -202,29 +248,29 @@ def train_pipeline():
     ], check=True, env=env)
     volume.commit()
 
-    # 6. Pick best checkpoint
+    # 2. Pick best checkpoint
     pths = glob.glob(f"{ckpts}/nutrisense_*.pth")
     if not pths:
         raise RuntimeError("No checkpoint was saved by train.py")
     best = max(pths, key=lambda p: float(re.search(r"_(\d+\.\d+)_", p).group(1)))
     print(f"\nBest checkpoint: {best}")
 
-    # 7. Ablation ────────────────────────────────────────────────────────────
-    print("\n=== Step 3/5: Ablation study ===")
+    # 3. Ablation ────────────────────────────────────────────────────────────
+    print("\n=== Step 2/4: Ablation study ===")
     subprocess.run([
-        "python", str(model_dir / "ablation.py"),
+        "python", "-u", str(model_dir / "ablation.py"),
         "--dataset_dir", unified,
         "--class_index", class_index,
         "--output_dir",  eval_d,
-        "--epochs",      "4",     # trimmed from 8 — still meaningful comparison
+        "--epochs",      "4",
         "--batch_size",  "64",
     ], check=True, env=env)
     volume.commit()
 
-    # 8. Evaluate + Grad-CAM ─────────────────────────────────────────────────
-    print("\n=== Step 4/5: Evaluation + Grad-CAM ===")
+    # 4. Evaluate + Grad-CAM ─────────────────────────────────────────────────
+    print("\n=== Step 3/4: Evaluation + Grad-CAM ===")
     subprocess.run([
-        "python", str(model_dir / "evaluate.py"),
+        "python", "-u", str(model_dir / "evaluate.py"),
         "--checkpoint",      best,
         "--dataset_dir",     unified,
         "--class_index",     class_index,
@@ -233,16 +279,16 @@ def train_pipeline():
     ], check=True, env=env)
     volume.commit()
 
-    # 9. Export to ONNX ──────────────────────────────────────────────────────
-    print("\n=== Step 5/5: Export to ONNX ===")
+    # 5. Export to ONNX ──────────────────────────────────────────────────────
+    print("\n=== Step 4/4: Export to ONNX ===")
     subprocess.run([
-        "python", str(model_dir / "export.py"),
+        "python", "-u", str(model_dir / "export.py"),
         "--checkpoint", best,
         "--output",     f"{work}/model.onnx",
     ], check=True, env=env)
     volume.commit()
 
-    # 10. Summary ────────────────────────────────────────────────────────────
+    # Summary
     print("\n=== Outputs in /data ===")
     for f in [
         "model.onnx", "model_class_index.json", "class_index.json", "dataset_stats.csv",
@@ -257,16 +303,29 @@ def train_pipeline():
     print(f"  ✓  evaluation/gradcam_samples/  ({n_gradcams} PNGs)")
 
     print("\nPipeline complete.")
-    print("Fetch outputs:")
-    print("  modal volume get nutrisense /model.onnx ./outputs/")
-    print("  modal volume get nutrisense /class_index.json ./outputs/")
-    print("  modal volume get nutrisense /evaluation ./outputs/ --recursive")
 
 
-# ── Optional: a tiny smoke test that doesn't burn GPU time ─────────────────
+# ── Helper: clean stale unified_dataset (run if you need a fresh curate) ───
+@app.function(image=cpu_image, volumes={"/data": volume}, cpu=2.0, timeout=10 * 60)
+def reset_unified():
+    """Wipe /data/unified_dataset/ so curate starts from scratch."""
+    import os, shutil
+    target = "/data/unified_dataset"
+    if os.path.exists(target):
+        shutil.rmtree(target)
+        print(f"✓ Removed {target}")
+    for f in ["/data/class_index.json", "/data/dataset_stats.csv"]:
+        if os.path.exists(f):
+            os.remove(f)
+            print(f"✓ Removed {f}")
+    volume.commit()
+    print("Ready for a fresh curate.")
+
+
+# ── Smoke test: list Volume contents ───────────────────────────────────────
 @app.function(image=cpu_image, volumes={"/data": volume}, cpu=1.0)
 def list_volume():
-    """Quick sanity check — lists what's in /data on the Volume."""
+    """Lists what's in /data on the Volume — useful for debugging."""
     import os
     for root, _, files in os.walk("/data", followlinks=False):
         depth = root.replace("/data", "").count("/")
