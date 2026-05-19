@@ -144,8 +144,9 @@ def setup_datasets():
     memory=16384,
 )
 def train_pipeline():
-    """Curate to /tmp → Train → Ablate → Evaluate → Export ONNX."""
-    import glob, os, re, shutil, subprocess
+    """Pre-stage raw data → Curate → Train → Ablate → Evaluate → Export ONNX."""
+    import glob, os, re, shutil, subprocess, time
+    from multiprocessing import Pool
     from pathlib import Path
 
     # 1. Pull latest model/ scripts ─────────────────────────────────────────
@@ -158,25 +159,65 @@ def train_pipeline():
         )
     model_dir = code_dir / "model"
 
-    raw = Path("/data/raw")
-    food101 = str(raw / "kmader/food41/images")
-    khana   = str(raw / "kashyap077/indian-food/Images")
-    deshi   = str(raw / "shaidurpranto/deshifoodbd/food_data_english/food_data_english/images")
-    scraped = str(raw / "sameen03/nutrisense-scraped/scraped")
+    vol_raw = Path("/data/raw")
+    vol_paths = {
+        "food101": vol_raw / "kmader/food41/images",
+        "khana":   vol_raw / "kashyap077/indian-food/Images",
+        "deshi":   vol_raw / "shaidurpranto/deshifoodbd/food_data_english/food_data_english/images",
+        "scraped": vol_raw / "sameen03/nutrisense-scraped/scraped",
+    }
 
-    print("=== Path verification ===")
-    for name, p in [("FOOD101", food101), ("KHANA", khana),
-                    ("DESHI",  deshi),    ("SCRAPED", scraped)]:
-        ok = os.path.exists(p)
+    print("=== Volume path verification ===")
+    for name, p in vol_paths.items():
+        ok = p.exists()
         print(f"  {'✓' if ok else '✗ MISSING'}  {name}: {p}")
         if not ok:
             raise RuntimeError(f"Missing input: {p} — run setup_datasets first")
 
-    # /tmp = container-local SSD. Free of Modal Volume's file-count limits.
-    # Cleaned up automatically when the container exits.
+    # 2. Pre-stage raw data to /tmp (local SSD) ─────────────────────────────
+    # CRITICAL: training MUST read from local SSD. Reading from Modal Volume
+    # in a DataLoader hot path = network round-trip per image = GPU starves.
+    # v4 ran for 3 hours with 0.163 CPU cores in use because DataLoader workers
+    # spent all their time waiting on Volume reads.
+    local_raw = Path("/tmp/raw")
+    local_paths = {k: local_raw / k for k in vol_paths}
+
+    print("\n=== Pre-staging raw data to /tmp (local SSD) ===")
+    t0 = time.time()
+    for name, src in vol_paths.items():
+        dst = local_paths[name]
+        if dst.exists() and any(dst.iterdir()):
+            print(f"  ✓ Already staged: {name}")
+            continue
+        dst.mkdir(parents=True, exist_ok=True)
+        # Build list of (src_file, dst_file) for parallel copy
+        pairs = []
+        for cls_dir in sorted(src.iterdir()):
+            if not cls_dir.is_dir():
+                continue
+            local_cls = dst / cls_dir.name
+            local_cls.mkdir(exist_ok=True)
+            for f in cls_dir.iterdir():
+                if f.is_file():
+                    pairs.append((str(f), str(local_cls / f.name)))
+        print(f"  ⬇ {name}: copying {len(pairs):,} files…")
+        ct0 = time.time()
+        with Pool(processes=16) as pool:
+            pool.starmap(shutil.copy2, pairs, chunksize=200)
+        dt = time.time() - ct0
+        print(f"  ✓ {name}: {len(pairs):,} files in {dt:.0f}s "
+              f"({len(pairs)/(dt+0.01):.0f} files/s)")
+    print(f"\n  Total staging: {time.time()-t0:.0f}s")
+
+    # /tmp paths used everywhere from here on
+    food101 = str(local_paths["food101"])
+    khana   = str(local_paths["khana"])
+    deshi   = str(local_paths["deshi"])
+    scraped = str(local_paths["scraped"])
+
     unified = "/tmp/unified_dataset"
-    work    = "/tmp"               # class_index.json + dataset_stats.csv go here
-    eval_d  = "/data/evaluation"   # but eval outputs persist on Volume
+    work    = "/tmp"
+    eval_d  = "/data/evaluation"
     ckpts   = "/data/checkpoints"
     for d in [eval_d, ckpts]:
         os.makedirs(d, exist_ok=True)
@@ -213,7 +254,7 @@ def train_pipeline():
         "--phase1_epochs", "5",
         "--phase2_epochs", "15",
         "--patience",      "3",
-        "--num_workers",   "4",
+        "--num_workers",   "8",
     ], check=True, env=env)
     volume.commit()
 
