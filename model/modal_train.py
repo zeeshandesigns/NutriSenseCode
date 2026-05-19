@@ -4,12 +4,11 @@ NutriSense AI — Modal training pipeline.
 Runs the full Kaggle-equivalent flow (curate → train → ablate → evaluate → export)
 on Modal's infrastructure. No 12-hour session cap, no flaky web UI.
 
-Estimated cost per stage:
+Estimated cost:
     setup_datasets   ~30-60 min CPU   (~$0.20)        — once per Volume
-    curate           ~5-10 min CPU    (~$0.05)         — symlinks, fast
-    train_pipeline   ~4-6 hrs A10G    (~$5-7)
+    train_pipeline   ~5-7 hrs A10G    (~$6-8)
                                       ─────
-                                      ~$5.50-7.50 total
+                                      ~$6-8 total
 
 Usage:
     pip install modal
@@ -18,29 +17,33 @@ Usage:
         KAGGLE_USERNAME=<your-username> \\
         KAGGLE_KEY=<your-classic-token>                # one-time secret
 
-    modal run --detach model/modal_train.py::setup_datasets     # first time only (~30-60 min)
-    modal run --detach model/modal_train.py::curate              # ~5-10 min CPU
-    modal run --detach model/modal_train.py::train_pipeline      # ~4-6 hrs GPU
+    modal run --detach model/modal_train.py::setup_datasets     # first time only
+    modal run --detach model/modal_train.py::train_pipeline     # ~5-7 hrs
 
-    # --detach is critical for long runs: it tells Modal to keep the function
-    # running even if your local terminal disconnects (Wi-Fi blip, laptop sleep,
-    # closing the shell, etc.). Without --detach, any local disconnect cancels
-    # the run mid-flight. We learned this the hard way.
-
-    # curate is split out of train_pipeline because:
-    # 1. It's CPU work only — running it on A10G wasted ~$1/hr while we waited.
-    # 2. The first attempt had curate burn 90 min before we caught that
-    #    shutil.copy2 across 264K files on a Modal Volume is glacially slow
-    #    (~3 files/sec = ~23 hours). curate_classes.py now uses os.symlink
-    #    which is O(1) per file.
+    # --detach is critical: it tells Modal to keep the function running even
+    # if your local terminal disconnects. Without --detach, any local
+    # disconnect cancels the run mid-flight.
 
     # Fetch outputs to your machine:
     modal volume get nutrisense /model.onnx                   ./outputs/
     modal volume get nutrisense /class_index.json             ./outputs/
     modal volume get nutrisense /evaluation                   ./outputs/ --recursive
 
+Architecture notes:
+- Raw datasets live on the Volume (/data/raw/, persistent).
+- Unified dataset (curate output) lives in container-local /tmp (NOT
+  Volume) because Modal Volume's file-count limit doesn't tolerate
+  ~264K small entries. /tmp is ephemeral SSD inside the container.
+- Final outputs (model.onnx, evaluation/, checkpoints/) write back to
+  the Volume.
+- curate uses os.symlink from /tmp/unified_dataset/<class>/<file>.jpg
+  → /data/raw/<source>/<class>/<file>.jpg. Symlinks are O(1) per file
+  and PIL reads through them transparently.
+- curate runs in the same GPU container as train_pipeline (~5-10 min
+  on local SSD) because /tmp doesn't transfer between containers. The
+  GPU cost during curate is negligible (~$0.18).
+
 To upgrade to A100 (~2x faster, ~2x cost), change gpu="A10G" → gpu="A100".
-To upgrade to H100 (~4x faster, ~3.5x cost), change to gpu="H100".
 """
 
 import modal
@@ -131,20 +134,21 @@ def setup_datasets():
     print("\nAll datasets staged in /data/raw/")
 
 
-# ── Step 2: curate unified dataset (CPU only — symlinks, fast) ─────────────
+# ── Step 2: end-to-end on GPU (curate to /tmp, train, ablate, evaluate, export) ─
 @app.function(
-    image=cpu_image,
+    image=gpu_image,
+    gpu="A10G",                       # A100 or H100 for faster (and more $$$)
     volumes={"/data": volume},
-    timeout=2 * 60 * 60,
+    timeout=10 * 60 * 60,             # 10 hr cap
     cpu=4.0,
-    memory=4096,
+    memory=16384,
 )
-def curate():
-    """Build the unified_dataset using symlinks. ~5-10 min for 264K files."""
-    import os, subprocess
+def train_pipeline():
+    """Curate to /tmp → Train → Ablate → Evaluate → Export ONNX."""
+    import glob, os, re, shutil, subprocess
     from pathlib import Path
 
-    # Clone the latest curate_classes.py
+    # 1. Pull latest model/ scripts ─────────────────────────────────────────
     code_dir = Path("/tmp/nutrisense")
     if not code_dir.exists():
         print("Cloning repo…")
@@ -168,12 +172,21 @@ def curate():
         if not ok:
             raise RuntimeError(f"Missing input: {p} — run setup_datasets first")
 
-    unified = "/data/unified_dataset"
+    # /tmp = container-local SSD. Free of Modal Volume's file-count limits.
+    # Cleaned up automatically when the container exits.
+    unified = "/tmp/unified_dataset"
+    work    = "/tmp"               # class_index.json + dataset_stats.csv go here
+    eval_d  = "/data/evaluation"   # but eval outputs persist on Volume
+    ckpts   = "/data/checkpoints"
+    for d in [eval_d, ckpts]:
+        os.makedirs(d, exist_ok=True)
     os.makedirs(unified, exist_ok=True)
 
+    class_index = f"{work}/class_index.json"
     env = {**os.environ, "PYTHONUNBUFFERED": "1", "CURATE_USE_SYMLINKS": "1"}
 
-    print("\n=== Curating with symlinks ===")
+    # 2. Curate (symlinks to /tmp — fast) ───────────────────────────────────
+    print("\n=== Step 1/5: Curating to /tmp ===")
     subprocess.run([
         "python", "-u", str(model_dir / "curate_classes.py"),
         "--food101",    food101,
@@ -184,57 +197,13 @@ def curate():
         "--min_images", "100",
     ], check=True, env=env)
 
+    # Snapshot the curate metadata to the Volume so we can recover if needed
+    shutil.copy2(f"{work}/class_index.json", "/data/class_index.json")
+    shutil.copy2(f"{work}/dataset_stats.csv", "/data/dataset_stats.csv")
     volume.commit()
 
-    # Summary
-    classes = sorted(os.listdir(unified))
-    total = sum(len(os.listdir(os.path.join(unified, c))) for c in classes
-                if os.path.isdir(os.path.join(unified, c)))
-    print(f"\n✓ Curate complete: {len(classes)} classes, {total:,} total entries")
-
-
-# ── Step 3: train, ablate, evaluate, export — pure GPU work ────────────────
-@app.function(
-    image=gpu_image,
-    gpu="A10G",                       # A100 or H100 for faster (and more $$$)
-    volumes={"/data": volume},
-    timeout=10 * 60 * 60,             # 10 hr cap
-    cpu=4.0,
-    memory=16384,
-)
-def train_pipeline():
-    """Train → Ablate → Evaluate → Export ONNX. Assumes `curate` has already run."""
-    import glob, os, re, subprocess
-    from pathlib import Path
-
-    code_dir = Path("/tmp/nutrisense")
-    if not code_dir.exists():
-        print("Cloning repo…")
-        subprocess.run(
-            ["git", "clone", "--depth", "1", REPO_URL, str(code_dir)],
-            check=True,
-        )
-    model_dir = code_dir / "model"
-
-    unified = "/data/unified_dataset"
-    work    = "/data"
-    eval_d  = "/data/evaluation"
-    ckpts   = "/data/checkpoints"
-    for d in [eval_d, ckpts]:
-        os.makedirs(d, exist_ok=True)
-
-    class_index = f"{work}/class_index.json"
-
-    # Sanity checks
-    if not os.path.exists(unified) or not os.listdir(unified):
-        raise RuntimeError("unified_dataset is empty — run `curate` first")
-    if not os.path.exists(class_index):
-        raise RuntimeError(f"{class_index} not found — run `curate` first")
-
-    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
-
-    # 1. Train (two-phase) ───────────────────────────────────────────────────
-    print("\n=== Step 1/4: Two-phase training ===")
+    # 3. Train (two-phase) ───────────────────────────────────────────────────
+    print("\n=== Step 2/5: Two-phase training ===")
     subprocess.run([
         "python", "-u", str(model_dir / "train.py"),
         "--dataset_dir",   unified,
@@ -248,15 +217,15 @@ def train_pipeline():
     ], check=True, env=env)
     volume.commit()
 
-    # 2. Pick best checkpoint
+    # 4. Pick best checkpoint
     pths = glob.glob(f"{ckpts}/nutrisense_*.pth")
     if not pths:
         raise RuntimeError("No checkpoint was saved by train.py")
     best = max(pths, key=lambda p: float(re.search(r"_(\d+\.\d+)_", p).group(1)))
     print(f"\nBest checkpoint: {best}")
 
-    # 3. Ablation ────────────────────────────────────────────────────────────
-    print("\n=== Step 2/4: Ablation study ===")
+    # 5. Ablation ────────────────────────────────────────────────────────────
+    print("\n=== Step 3/5: Ablation study ===")
     subprocess.run([
         "python", "-u", str(model_dir / "ablation.py"),
         "--dataset_dir", unified,
@@ -267,8 +236,8 @@ def train_pipeline():
     ], check=True, env=env)
     volume.commit()
 
-    # 4. Evaluate + Grad-CAM ─────────────────────────────────────────────────
-    print("\n=== Step 3/4: Evaluation + Grad-CAM ===")
+    # 6. Evaluate + Grad-CAM ─────────────────────────────────────────────────
+    print("\n=== Step 4/5: Evaluation + Grad-CAM ===")
     subprocess.run([
         "python", "-u", str(model_dir / "evaluate.py"),
         "--checkpoint",      best,
@@ -279,12 +248,12 @@ def train_pipeline():
     ], check=True, env=env)
     volume.commit()
 
-    # 5. Export to ONNX ──────────────────────────────────────────────────────
-    print("\n=== Step 4/4: Export to ONNX ===")
+    # 7. Export to ONNX ──────────────────────────────────────────────────────
+    print("\n=== Step 5/5: Export to ONNX ===")
     subprocess.run([
         "python", "-u", str(model_dir / "export.py"),
         "--checkpoint", best,
-        "--output",     f"{work}/model.onnx",
+        "--output",     "/data/model.onnx",
     ], check=True, env=env)
     volume.commit()
 
@@ -295,7 +264,7 @@ def train_pipeline():
         "evaluation/ablation_results.csv", "evaluation/results.json",
         "evaluation/confusion_matrix.png", "evaluation/per_class_accuracy.png",
     ]:
-        p = f"{work}/{f}"
+        p = f"/data/{f}"
         size = os.path.getsize(p) if os.path.exists(p) else 0
         print(f"  {'✓' if size > 0 else '✗'}  {f}  ({size:,} bytes)")
 
