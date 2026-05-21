@@ -10,9 +10,10 @@ venv/
 .venv/
 env/
 
-# ML model files (too large for git)
+# ML model files (too large for git) — except the deployed production model
 *.pth
 *.onnx
+!backend/data/model.onnx
 
 # Build outputs
 dist/
@@ -44,3 +45,4 @@ docs/FRONTEND.md
 docs/KAGGLE.md
 docs/TEST_CASES.md
 docs/TESTING.md
+outputs/

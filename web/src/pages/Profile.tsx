@@ -21,10 +21,12 @@ const RESTRICTIONS = [
   { key: 'dairy_free',  label: 'Dairy-Free' },
 ]
 
+// Full production training: top-1 82.65%, top-3 93.65% on held-out 20% val (270 classes)
+// Ablation below: all three models trained for 4 epochs on the same split.
 const ABLATION = [
-  { model: 'EfficientNetB0 (ours)', params: '5.3M', top1: '~80%', top3: '~93%', highlight: true },
-  { model: 'MobileNetV2',           params: '3.4M', top1: '~74%', top3: '~89%', highlight: false },
-  { model: 'ResNet50',              params: '25.6M',top1: '~76%', top3: '~90%', highlight: false },
+  { model: 'EfficientNetB0 (ours)', params: '4.4M',  top1: '71.29%', top3: '87.49%', highlight: true },
+  { model: 'MobileNetV2',           params: '2.6M',  top1: '56.04%', top3: '76.99%', highlight: false },
+  { model: 'ResNet50',              params: '24.1M', top1: '33.10%', top3: '53.06%', highlight: false },
 ]
 
 const LIMITATIONS = [

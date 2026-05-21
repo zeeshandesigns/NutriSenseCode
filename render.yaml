@@ -25,7 +25,5 @@ services:
         value: ./data/gradcam_index.json
       - key: CONFIDENCE_THRESHOLD
         value: "0.70"
-    disk:
-      name: model-data
-      mountPath: /opt/render/project/src/backend/data
-      sizeGB: 1
+    # No separate disk — the ~17MB model is committed to the repo at
+    # backend/data/model.onnx (+ .data) so it ships with every deploy.

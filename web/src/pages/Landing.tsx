@@ -7,10 +7,15 @@ const STEPS = [
   { icon: ClipboardList, title: 'Understand', desc: 'Get nutrition facts and a plain-language insight instantly' },
 ]
 
+// Production model headline (full two-phase training, held-out 20% val split, 270 classes)
+const HEADLINE = { top1: '82.65%', top3: '93.65%' }
+
+// Ablation: all three models trained for the same 4 epochs from ImageNet pretrain
+// on the same train/val split — comparable apples-to-apples.
 const ABLATION = [
-  { model: 'EfficientNetB0 (ours)', params: '5.3M', top1: '~80%', top3: '~93%', highlight: true },
-  { model: 'MobileNetV2',           params: '3.4M', top1: '~74%', top3: '~89%', highlight: false },
-  { model: 'ResNet50',              params: '25.6M',top1: '~76%', top3: '~90%', highlight: false },
+  { model: 'EfficientNetB0 (ours)', params: '4.4M',  top1: '71.29%', top3: '87.49%', highlight: true },
+  { model: 'MobileNetV2',           params: '2.6M',  top1: '56.04%', top3: '76.99%', highlight: false },
+  { model: 'ResNet50',              params: '24.1M', top1: '33.10%', top3: '53.06%', highlight: false },
 ]
 
 export default function Landing() {
@@ -60,9 +65,23 @@ export default function Landing() {
       <section className="max-w-3xl mx-auto px-8 py-16">
         <h2 className="text-2xl font-bold mb-2">The Model</h2>
         <p className="text-gray-500 mb-6 text-sm">
-          Fine-tuned EfficientNetB0 trained on a curated dataset of ~100 food classes including ~35 South Asian dishes
-          absent from standard benchmarks. Ablation study confirmed it outperforms lighter and heavier alternatives.
+          Fine-tuned EfficientNetB0 trained on a curated dataset of 270 food classes from Food-101,
+          Khana 2025 (Indian), DeshiFoodBD, and self-scraped Pakistani dishes. Two-phase transfer
+          learning (5 frozen-backbone + 15 fine-tune epochs).
         </p>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-brand-50 border border-brand-200 rounded-xl p-4 text-center">
+            <p className="text-3xl font-bold text-brand-700">{HEADLINE.top1}</p>
+            <p className="text-xs text-gray-500 mt-1">Top-1 accuracy (held-out 20% val)</p>
+          </div>
+          <div className="bg-brand-50 border border-brand-200 rounded-xl p-4 text-center">
+            <p className="text-3xl font-bold text-brand-700">{HEADLINE.top3}</p>
+            <p className="text-xs text-gray-500 mt-1">Top-3 accuracy</p>
+          </div>
+        </div>
+
+        <h3 className="font-semibold text-gray-700 mb-2 text-sm">Architecture ablation — all 4 epochs, same split</h3>
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-brand-50 text-left">
@@ -83,7 +102,10 @@ export default function Landing() {
             ))}
           </tbody>
         </table>
-        <p className="text-xs text-gray-400 mt-3">Approximate values from held-out validation set.</p>
+        <p className="text-xs text-gray-400 mt-3">
+          Ablation epochs trimmed to 4 for compute fairness; the headline values above use the full
+          two-phase training schedule on the same EfficientNetB0 architecture.
+        </p>
       </section>
 
       <footer className="border-t py-8 text-center text-sm text-gray-400">
