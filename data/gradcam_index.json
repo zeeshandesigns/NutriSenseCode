@@ -1,1 +1,27 @@
-{}
+{
+  "aloo_paratha": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/aloo_paratha_gradcam.png",
+  "anda_paratha": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/anda_paratha_gradcam.png",
+  "bhel_puri": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/bhel_puri_gradcam.png",
+  "biryani": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/biryani_gradcam.png",
+  "bread_pudding": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/bread_pudding_gradcam.png",
+  "bun_kebab": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/bun_kebab_gradcam.png",
+  "butter_chicken": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/butter_chicken_gradcam.png",
+  "chapli_kebab": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/chapli_kebab_gradcam.png",
+  "dahi_bhalla": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/dahi_bhalla_gradcam.png",
+  "gulab_jamun": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/gulab_jamun_gradcam.png",
+  "jalebi": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/jalebi_gradcam.png",
+  "kheer": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/kheer_gradcam.png",
+  "naan_bread": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/naan_bread_gradcam.png",
+  "nihari_lahori": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/nihari_lahori_gradcam.png",
+  "paya": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/paya_gradcam.png",
+  "phirni": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/phirni_gradcam.png",
+  "prime_rib": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/prime_rib_gradcam.png",
+  "rabri": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/rabri_gradcam.png",
+  "sajji": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/sajji_gradcam.png",
+  "samosa": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/samosa_gradcam.png",
+  "shami_kebab": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/shami_kebab_gradcam.png",
+  "suji_halwa": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/suji_halwa_gradcam.png",
+  "takoyaki": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/takoyaki_gradcam.png",
+  "tiramisu": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/tiramisu_gradcam.png",
+  "vada_pav": "https://qjbeiaadjpgrmllzazxe.supabase.co/storage/v1/object/public/gradcam/vada_pav_gradcam.png"
+}

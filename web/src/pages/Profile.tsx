@@ -154,7 +154,7 @@ export default function ProfilePage() {
         <div className="space-y-4 text-sm text-gray-600">
           <div>
             <h3 className="font-semibold text-gray-700 mb-1">Architecture</h3>
-            <p>EfficientNetB0 with ImageNet pretraining and two-phase fine-tuning. Trained on Kaggle (T4 x2 GPU).</p>
+            <p>EfficientNetB0 with ImageNet pretraining and two-phase fine-tuning (5 frozen-backbone + 15 fine-tune epochs). Trained on Modal A10G GPU.</p>
           </div>
           <div>
             <h3 className="font-semibold text-gray-700 mb-1">Dataset</h3>

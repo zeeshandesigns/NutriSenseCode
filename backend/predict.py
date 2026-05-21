@@ -29,7 +29,7 @@ def load_model():
     if not os.path.exists(MODEL_PATH):
         raise FileNotFoundError(
             f"Model file not found: {MODEL_PATH}\n"
-            "Run model training on Kaggle and copy model.onnx here, "
+            "Run model training on Modal (model/modal_train.py) and copy model.onnx here, "
             "or set MOCK_MODE=true in .env for development."
         )
 

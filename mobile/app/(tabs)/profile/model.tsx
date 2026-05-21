@@ -23,10 +23,11 @@ export default function AboutModelScreen() {
       <Card>
         <Card.Title title="Architecture" />
         <Card.Content>
-          <List.Item title="Model" description="EfficientNetB0 — ImageNet pretrained, two-phase fine-tuning" />
-          <List.Item title="Classes" description="~100 food classes, ~35 South Asian dishes" />
-          <List.Item title="Dataset" description="Food-101 + Khana 2025 (131K images) + DeshiFoodBD + self-scraped" />
-          <List.Item title="Training" description="Kaggle P100/T4 GPU — free tier" />
+          <List.Item title="Model" description="EfficientNetB0 — ImageNet pretrained, two-phase fine-tuning (5 + 15 epochs)" />
+          <List.Item title="Classes" description="270 food classes including ~25 South Asian dishes" />
+          <List.Item title="Dataset" description="Food-101 + Khana 2025 (Indian, 156K images) + DeshiFoodBD + self-scraped Pakistani" />
+          <List.Item title="Training" description="Modal A10G GPU — full schedule" />
+          <List.Item title="Held-out accuracy" description="Top-1 82.65% · Top-3 93.65%" />
         </Card.Content>
       </Card>
 
