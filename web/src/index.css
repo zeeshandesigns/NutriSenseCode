@@ -1,12 +1,77 @@
 @import "tailwindcss";
 
+/*
+ * NutriSense AI — design tokens
+ *
+ * Brand palette: emerald-flavored green (slightly more vibrant than
+ * Tailwind's classic green, better suited to food/health apps).
+ * Kept the brand-XXX names so existing components don't have to change.
+ *
+ * Typography: Plus Jakarta Sans for body/display (warm + modern), with
+ * JetBrains Mono for numerics (calorie counts, percentages, model
+ * accuracy) so they line up nicely in tables and stat cards.
+ */
 @theme {
-  --color-brand-50:  #f0fdf4;
-  --color-brand-100: #dcfce7;
-  --color-brand-500: #22c55e;
-  --color-brand-600: #16a34a;
-  --color-brand-700: #15803d;
-  --color-brand-800: #166534;
+  /* Brand — emerald spectrum */
+  --color-brand-50:  #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+
+  /* Type stacks */
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
 }
 
-body { font-family: system-ui, -apple-system, sans-serif; margin: 0; }
+html, body {
+  margin: 0;
+  /* OpenType features that Plus Jakarta Sans ships with — small caps,
+     stylistic alternates for 'a' and 'g' that make body text feel less
+     generic than Inter's default. */
+  font-feature-settings: "ss01", "cv11";
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #111827;
+  background: #fafafa;
+}
+
+/* Convenience class — apply mono font + tabular figures to any element
+   showing numbers (calorie counts, percentages, model accuracy badges). */
+.font-mono,
+.tabular {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum", "lnum";
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Tighter heading rhythm — Plus Jakarta Sans benefits from slightly
+   negative letter-spacing at larger sizes. */
+h1, h2, h3 {
+  letter-spacing: -0.015em;
+}
+h1 { letter-spacing: -0.025em; }
+
+/* Focus rings — accessible, branded. */
+*:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Soft global card shadow utility (slightly green-tinted, more
+   contemporary than plain gray). */
+.shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(6, 78, 59, 0.04),
+    0 4px 16px rgba(6, 78, 59, 0.06);
+}
