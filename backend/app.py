@@ -17,7 +17,10 @@ CORS(app, resources={r"/*": {"origins": [
     "http://localhost:*",
     "https://*.vercel.app",
     "https://nutrisense*.vercel.app",
+    "https://nutrisenseai.tech",
+    "https://*.nutrisenseai.tech",
     "exp://localhost:*",
+    "exp://*",
 ]}})
 
 app.register_blueprint(predict_bp)
