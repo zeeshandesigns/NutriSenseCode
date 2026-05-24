@@ -47,4 +47,13 @@ docs/TEST_CASES.md
 docs/TESTING.md
 docs/render.md
 docs/vercel.md
+docs/PREVIVA.md
 outputs/
+
+# AppDocs build intermediates (final .docx + .pdf are tracked)
+AppDocs/_merged.md
+AppDocs/combined.html
+AppDocs/src/
+
+# EAS build config (contains OpenRouter key — must not be public)
+mobile/eas.json

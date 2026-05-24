@@ -32,18 +32,30 @@ NutriSense AI fills the gap with a fine-tuned EfficientNetB0 trained on a curate
 
 No manual entry. No calorie counting. No meal plans. Just snap → understand.
 
+## Try it
+
+- **Live web app:** <https://nutrisenseai.tech>
+- **Android APK:** <https://expo.dev/artifacts/eas/kZ9qHcWgxjfN4SVicztphy.apk> — install directly on any Android phone
+- **Backend API:** <https://nutrisense-api.onrender.com/health>
+
 ## Screenshots
 
-<!-- TODO: add real screenshots — capture during pre-viva dry run -->
+> Screenshots will be captured during the pre-viva dry run and dropped into
+> [`docs/screenshots/`](docs/screenshots/) — see the checklist in that folder
+> for the exact shot list and filename conventions. The references below
+> will resolve once the PNGs are committed.
 
-| Mobile (Android / iOS via Expo) | Web (Vercel) |
-|---|---|
-| `docs/screenshots/mobile-scan.png` | `docs/screenshots/web-dashboard.png` |
-| `docs/screenshots/mobile-result.png` | `docs/screenshots/web-history.png` |
-| `docs/screenshots/mobile-history.png` | `docs/screenshots/web-insights.png` |
+### Web
 
-[Demo video](https://www.youtube.com/) <!-- replace with real link -->
-| [Live web app](https://nutrisense.vercel.app) <!-- replace with real URL -->
+| Landing | Scan + result | History |
+|---|---|---|
+| ![Landing](docs/screenshots/web-landing.png) | ![Dashboard](docs/screenshots/web-dashboard.png) | ![History](docs/screenshots/web-history.png) |
+
+### Mobile (Android, EAS preview build)
+
+| Scan tab | Result | History |
+|---|---|---|
+| ![Scan](docs/screenshots/mobile-scan.png) | ![Result](docs/screenshots/mobile-result.png) | ![History](docs/screenshots/mobile-history.png) |
 
 ## Architecture
 
