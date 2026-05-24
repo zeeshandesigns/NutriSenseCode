@@ -1,28 +1,39 @@
 @import "tailwindcss";
 
 /*
- * NutriSense AI — design tokens
+ * NutriSense AI — design system v2 (Whoop / Levels-inspired)
  *
- * Brand palette: emerald-flavored green (slightly more vibrant than
- * Tailwind's classic green, better suited to food/health apps).
- * Kept the brand-XXX names so existing components don't have to change.
+ * Palette is deliberately split between a deep forest green (primary,
+ * dominant surface) and a vibrant mint (accent for success / active
+ * tracking / metrics). Canvas is a cool premium off-white. Body /
+ * heading text use slate so we never hit pure black (#000) which
+ * always reads as cheap/student-project.
  *
- * Typography: Plus Jakarta Sans for body/display (warm + modern), with
- * JetBrains Mono for numerics (calorie counts, percentages, model
- * accuracy) so they line up nicely in tables and stat cards.
+ * Existing components use the `brand-*` scale — same names, new hexes,
+ * so nothing breaks. brand-700 stays the "primary" accessor.
  */
 @theme {
-  /* Brand — emerald spectrum */
-  --color-brand-50:  #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669;
-  --color-brand-700: #047857;
-  --color-brand-800: #065f46;
-  --color-brand-900: #064e3b;
+  /* Brand — deep forest spine, mint pop in the middle. */
+  --color-brand-50:  #f0faf6;  /* very light forest wash */
+  --color-brand-100: #dcf2e7;
+  --color-brand-200: #b8e5d0;
+  --color-brand-300: #86d2ae;
+  --color-brand-400: #51bc8c;
+  --color-brand-500: #10b981;  /* MINT — vibrant accent */
+  --color-brand-600: #047857;
+  --color-brand-700: #0a362a;  /* DEEP FOREST — primary brand */
+  --color-brand-800: #062318;
+  --color-brand-900: #03150e;
+
+  /* Canvas / surface / hairlines */
+  --color-canvas:    #f8faf9;  /* page background */
+  --color-surface:   #ffffff;  /* cards */
+  --color-hairline:  #e2e8f0;  /* borders */
+
+  /* Text — slate, never pure black */
+  --color-ink:       #1e293b;  /* headings */
+  --color-ink-soft:  #475569;  /* body */
+  --color-ink-mute:  #64748b;  /* eyebrow labels, captions */
 
   /* Type stacks */
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
@@ -31,22 +42,19 @@
 
 html, body {
   margin: 0;
-  /* OpenType features that Plus Jakarta Sans ships with — small caps,
-     stylistic alternates for 'a' and 'g' that make body text feel less
-     generic than Inter's default. */
-  font-feature-settings: "ss01", "cv11";
+  font-feature-settings: "ss01", "cv11";  /* alt 'a' + 'g' */
 }
 
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #111827;
-  background: #fafafa;
+  color: var(--color-ink);
+  background: var(--color-canvas);
 }
 
-/* Convenience class — apply mono font + tabular figures to any element
-   showing numbers (calorie counts, percentages, model accuracy badges). */
+/* Mono + tabular figures — apply to anything showing numbers
+   (calories, %, model accuracy) so columns of digits line up. */
 .font-mono,
 .tabular {
   font-family: var(--font-mono);
@@ -54,24 +62,31 @@ body {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* Tighter heading rhythm — Plus Jakarta Sans benefits from slightly
-   negative letter-spacing at larger sizes. */
-h1, h2, h3 {
-  letter-spacing: -0.015em;
-}
-h1 { letter-spacing: -0.025em; }
+/* Tighter heading rhythm */
+h1, h2, h3 { letter-spacing: -0.015em; }
+h1         { letter-spacing: -0.025em; }
 
-/* Focus rings — accessible, branded. */
+/* Accessible focus rings — branded */
 *:focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
-/* Soft global card shadow utility (slightly green-tinted, more
-   contemporary than plain gray). */
+/* Card elevation — Whoop-style. Soft, color-tinted, never gray. */
 .shadow-soft {
-  box-shadow:
-    0 1px 2px rgba(6, 78, 59, 0.04),
-    0 4px 16px rgba(6, 78, 59, 0.06);
+  box-shadow: 0 4px 24px -4px rgba(10, 54, 42, 0.04),
+              0 1px 2px      rgba(10, 54, 42, 0.04);
+}
+.shadow-soft-hover {
+  box-shadow: 0 12px 32px -8px rgba(10, 54, 42, 0.08),
+              0 2px 4px       rgba(10, 54, 42, 0.04);
+}
+
+/* Lift-on-hover utility for cards / clickable rows */
+.lift {
+  transition: transform 200ms ease, box-shadow 200ms ease, background-color 150ms ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
 }

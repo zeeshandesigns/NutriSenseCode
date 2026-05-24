@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, Loader2 } from 'lucide-react'
+import { Upload, Loader2, Camera } from 'lucide-react'
 
 interface Props { onFile: (f: File) => void; loading: boolean }
 
@@ -11,23 +11,38 @@ export default function UploadZone({ onFile, loading }: Props) {
   })
 
   return (
-    <div {...getRootProps()} className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-colors bg-white ${
-      loading ? 'opacity-60 cursor-not-allowed border-gray-300'
-      : isDragActive ? 'border-brand-500 bg-brand-50'
-      : 'border-gray-300 hover:border-brand-400 hover:bg-brand-50/30'
-    }`}>
+    <div
+      {...getRootProps()}
+      className={`relative rounded-2xl border-2 border-dashed bg-white transition-colors min-h-[260px] flex flex-col items-center justify-center px-8 py-10 text-center cursor-pointer ${
+        loading
+          ? 'opacity-60 cursor-not-allowed border-[#E2E8F0]'
+          : isDragActive
+            ? 'border-brand-500 bg-brand-50/40'
+            : 'border-brand-700/20 hover:bg-brand-700/5 hover:border-brand-700/40'
+      }`}
+    >
       <input {...getInputProps()} />
+
       {loading ? (
-        <Loader2 className="h-12 w-12 text-brand-600 mx-auto mb-3 animate-spin" />
+        <>
+          <Loader2 className="h-10 w-10 text-brand-700 mb-3 animate-spin" strokeWidth={2.25} />
+          <p className="text-base font-semibold text-[#1E293B]">Analysing your meal…</p>
+          <p className="text-xs text-[#64748B] mt-1">Running EfficientNetB0 + generating insight</p>
+        </>
       ) : (
-        <Upload className="h-12 w-12 text-brand-500 mx-auto mb-3" />
+        <>
+          <div className="h-14 w-14 rounded-full bg-brand-700/10 flex items-center justify-center mb-4">
+            <Upload className="h-6 w-6 text-brand-700" strokeWidth={2.25} />
+          </div>
+          <p className="text-base font-semibold text-[#1E293B]">
+            {isDragActive ? 'Drop the photo here' : 'Drop a meal photo or click to upload'}
+          </p>
+          <p className="text-xs text-[#64748B] mt-1">JPG or PNG · up to 5 MB</p>
+          <div className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-medium text-brand-700 bg-brand-50 px-3 py-1.5 rounded-full">
+            <Camera size={12} /> 270 dishes recognised
+          </div>
+        </>
       )}
-      <p className="text-base font-semibold text-gray-700">
-        {loading ? 'Analysing your food…'
-          : isDragActive ? 'Drop the photo here'
-          : 'Drag a food photo here, or click to select'}
-      </p>
-      <p className="text-xs text-gray-400 mt-1">JPG or PNG · max 5MB</p>
     </div>
   )
 }
