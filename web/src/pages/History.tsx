@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { Search, ChevronDown, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { displayLabel } from '../lib/api'
@@ -110,7 +110,7 @@ export default function History() {
                             <p className="font-semibold text-brand-700">{scan.nutrition?.calories ?? '—'} kcal</p>
                             <p className="text-xs text-gray-400">{Math.round(scan.confidence * 100)}% confident</p>
                           </div>
-                          {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400 shrink-0" /> : <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />}
+                          <ChevronDown className={`h-4 w-4 text-gray-400 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                         </div>
                       </button>
 

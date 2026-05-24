@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UtensilsCrossed, Eye, EyeOff, MailCheck, CheckCircle2 } from 'lucide-react'
+import { UtensilsCrossed, Eye, EyeOff, MailCheck, CheckCircle2, KeyRound } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
-type Mode = 'sign_in' | 'sign_up'
+type Mode = 'sign_in' | 'sign_up' | 'reset'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -15,10 +15,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  // After successful sign-up Supabase sends a verification email; show that
-  // state instead of bouncing the user to /dashboard (where they'd hit RLS
-  // errors because the session isn't established until they click the link).
   const [signedUpEmail, setSignedUpEmail] = useState<string | null>(null)
+  const [resetSent, setResetSent] = useState(false)
   const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'sending'>('idle')
 
   async function submit(e: React.FormEvent) {
@@ -26,17 +24,18 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      if (mode === 'sign_up') {
-        // Use supabase directly so we can inspect the response and detect
-        // whether email confirmation was required.
+      if (mode === 'reset') {
+        const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/login`,
+        })
+        if (err) throw err
+        setResetSent(true)
+      } else if (mode === 'sign_up') {
         const { data, error: err } = await supabase.auth.signUp({ email, password })
         if (err) throw err
-        // If the project requires email confirmation (default), `session`
-        // is null and `user.identities` is empty — show check-your-inbox UI.
         if (!data.session) {
           setSignedUpEmail(email)
         } else {
-          // Project has email confirmation disabled — proceed straight in.
           navigate('/dashboard')
         }
       } else {
@@ -62,19 +61,28 @@ export default function Login() {
     }
   }
 
+  function switchMode(next: Mode) {
+    setMode(next)
+    setError('')
+    setResetSent(false)
+  }
+
+  const subtitle =
+    signedUpEmail ? 'Check your email' :
+    mode === 'sign_up' ? 'Create your account' :
+    mode === 'reset' ? 'Reset your password' :
+    'Welcome back'
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 to-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
           <UtensilsCrossed className="h-12 w-12 text-brand-700 mx-auto mb-3" />
           <h1 className="text-2xl font-bold text-brand-700">NutriSense AI</h1>
-          <p className="text-gray-400 text-sm mt-1">
-            {signedUpEmail ? 'Check your email' : mode === 'sign_up' ? 'Create your account' : 'Welcome back'}
-          </p>
+          <p className="text-gray-400 text-sm mt-1">{subtitle}</p>
         </div>
 
         {signedUpEmail ? (
-          // ── Post sign-up: check-your-email state ───────────────────────
           <div className="space-y-4 text-center">
             <div className="bg-brand-50 border border-brand-200 rounded-xl p-5 flex flex-col items-center gap-2">
               <MailCheck className="h-10 w-10 text-brand-700" />
@@ -105,8 +113,24 @@ export default function Login() {
               <CheckCircle2 size={16} /> I've verified — sign me in
             </button>
           </div>
+        ) : resetSent ? (
+          <div className="space-y-4 text-center">
+            <div className="bg-brand-50 border border-brand-200 rounded-xl p-5 flex flex-col items-center gap-2">
+              <KeyRound className="h-10 w-10 text-brand-700" />
+              <p className="text-sm font-semibold text-gray-800">Password reset email sent</p>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                If <strong className="text-gray-800">{email}</strong> matches an account, you'll get a link
+                to set a new password. Check your inbox and spam folder.
+              </p>
+            </div>
+            <button
+              onClick={() => switchMode('sign_in')}
+              className="w-full bg-brand-700 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-brand-800 transition-colors"
+            >
+              Back to sign in
+            </button>
+          </div>
         ) : (
-          // ── Sign-in / sign-up form ─────────────────────────────────────
           <>
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg mb-4 text-sm">
@@ -123,42 +147,66 @@ export default function Login() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'} required minLength={6}
-                    value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+              {mode !== 'reset' && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700">Password</label>
+                    {mode === 'sign_in' && (
+                      <button
+                        type="button"
+                        onClick={() => switchMode('reset')}
+                        className="text-xs text-brand-700 hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'} required minLength={6}
+                      value={password} onChange={e => setPassword(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {mode === 'sign_up' && (
+                    <p className="text-xs text-gray-400 mt-1">At least 6 characters.</p>
+                  )}
                 </div>
-                {mode === 'sign_up' && (
-                  <p className="text-xs text-gray-400 mt-1">At least 6 characters.</p>
-                )}
-              </div>
+              )}
 
               <button
                 type="submit" disabled={loading}
                 className="w-full bg-brand-700 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-brand-800 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Please wait…' : mode === 'sign_up' ? 'Create Account' : 'Sign In'}
+                {loading ? 'Please wait…' :
+                 mode === 'reset' ? 'Send reset link' :
+                 mode === 'sign_up' ? 'Create Account' :
+                 'Sign In'}
               </button>
             </form>
 
-            <button
-              onClick={() => { setMode(mode === 'sign_up' ? 'sign_in' : 'sign_up'); setError('') }}
-              className="mt-4 text-sm text-gray-500 hover:text-gray-700 w-full text-center transition-colors"
-            >
-              {mode === 'sign_up' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
+            <div className="mt-4 text-center space-y-1">
+              {mode === 'reset' ? (
+                <button onClick={() => switchMode('sign_in')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                  Back to sign in
+                </button>
+              ) : (
+                <button
+                  onClick={() => switchMode(mode === 'sign_up' ? 'sign_in' : 'sign_up')}
+                  className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {mode === 'sign_up' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>

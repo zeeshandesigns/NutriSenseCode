@@ -17,6 +17,7 @@ export default function Navbar() {
   const isActive = (path: string) => location.pathname === path
 
   async function handleSignOut() {
+    if (!window.confirm('Sign out of NutriSense AI?')) return
     await signOut()
     navigate('/')
   }

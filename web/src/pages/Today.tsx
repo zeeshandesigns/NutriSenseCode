@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Loader2, RotateCcw } from 'lucide-react'
 import { predictFile } from '../lib/api'
 import type { ScanResult } from '../lib/api'
 import { supabase } from '../lib/supabase'
@@ -29,17 +30,13 @@ export default function Today() {
     load()
   }, [user, result])
 
-  // Revoke object URLs when component unmounts or preview changes
   useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-    }
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }
   }, [previewUrl])
 
   async function handleFile(file: File) {
     setError(''); setLoading(true); setResult(null)
 
-    // Show preview immediately
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(URL.createObjectURL(file))
 
@@ -70,6 +67,13 @@ export default function Today() {
     }
   }
 
+  function resetScan() {
+    setResult(null)
+    setError('')
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -83,13 +87,38 @@ export default function Today() {
           </span>
         )}
       </div>
-      <UploadZone onFile={handleFile} loading={loading} />
+
+      {/* Loading state — preview the photo with a spinner overlay */}
+      {loading && previewUrl ? (
+        <div className="relative w-full max-h-80 overflow-hidden rounded-2xl border bg-black">
+          <img src={previewUrl} alt="Analysing…" className="w-full max-h-80 object-cover opacity-60" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <Loader2 className="h-10 w-10 text-white animate-spin" />
+            <p className="text-sm text-white font-medium">Analysing your food…</p>
+          </div>
+        </div>
+      ) : !result ? (
+        <UploadZone onFile={handleFile} loading={loading} />
+      ) : null}
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
           {error}
         </div>
       )}
-      {result && <ResultCard result={result} imageUrl={previewUrl} />}
+
+      {result && !loading && (
+        <>
+          <ResultCard result={result} imageUrl={previewUrl} />
+          <button
+            onClick={resetScan}
+            className="w-full bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Scan another dish
+          </button>
+        </>
+      )}
     </div>
   )
 }

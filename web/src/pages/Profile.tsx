@@ -143,7 +143,19 @@ export default function ProfilePage() {
         >
           {saving ? 'Saving…' : 'Save Changes'}
         </button>
-        {saved && <span className="text-brand-700 text-sm flex items-center gap-1"><Check className="h-4 w-4" /> Saved</span>}
+      </div>
+
+      {/* Toast — slides in from bottom-right when save completes */}
+      <div
+        className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
+          saved ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'
+        }`}
+        aria-live="polite"
+      >
+        <div className="bg-brand-700 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-medium">
+          <Check className="h-5 w-5" />
+          Preferences saved
+        </div>
       </div>
 
       {/* About the Model */}

@@ -40,8 +40,18 @@ export default function Chatbot() {
     setInput('')
     setLoading(true)
 
-    const goal = profile?.goal ?? 'curious'
-    const restrictions = profile?.restrictions?.join(', ') || 'none'
+    // Re-fetch profile each send so goal/restrictions edits in Profile
+    // take effect immediately (no page-reload needed)
+    let livePrompt = profile
+    if (user) {
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (data) {
+        livePrompt = data
+        setProfile(data)
+      }
+    }
+    const goal = livePrompt?.goal ?? 'curious'
+    const restrictions = livePrompt?.restrictions?.join(', ') || 'none'
     const systemPrompt = (
       `You are a friendly South Asian food and nutrition assistant. ` +
       `User's goal: ${goal.replace('_', ' ')}. Restrictions: ${restrictions}. ` +
