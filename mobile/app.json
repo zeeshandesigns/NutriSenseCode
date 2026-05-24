@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "NutriSense AI",
-    "slug": "nutrisense",
+    "slug": "nutrisenseai",
     "scheme": "nutrisense",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,9 +14,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zynkit.nutrisenseai"
     },
     "android": {
+      "package": "com.zynkit.nutrisenseai",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -31,6 +33,11 @@
     "plugins": [
       "expo-router",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8848e2e2-59ba-4c54-bda7-d133e8441e24"
+      }
+    }
   }
 }
