@@ -2,7 +2,8 @@ import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recha
 
 interface Props { nutrition: { calories: number; protein: number; carbs: number; fat: number } }
 
-const COLORS = ['#2E7D32', '#4CAF50', '#81C784']
+// Brand-aligned palette (deep forest → vibrant mint → soft mint)
+const COLORS = ['#0A362A', '#10B981', '#86D2AE']
 
 export default function MacroChart({ nutrition }: Props) {
   const data = [

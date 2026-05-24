@@ -23,7 +23,7 @@ export default function WeeklyTrendChart({ scans }: Props) {
           <XAxis dataKey="day" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} />
           <Tooltip />
-          <Line type="monotone" dataKey="avgCal" stroke="#2E7D32" strokeWidth={2} dot={{ r: 4 }} />
+          <Line type="monotone" dataKey="avgCal" stroke="#0A362A" strokeWidth={2.5} dot={{ r: 4, fill: '#10B981' }} activeDot={{ r: 6, fill: '#0A362A' }} />
         </LineChart>
       </ResponsiveContainer>
     </div>
