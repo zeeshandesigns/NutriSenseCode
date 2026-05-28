@@ -26,7 +26,7 @@ export default function ScanButton({ onCamera, onGallery, imageUri }: Props) {
 const styles = StyleSheet.create({
   container:   { gap: 12, alignItems: 'center', width: '100%' },
   preview:     { width: '100%', height: 220, borderRadius: 16 },
-  placeholder: { width: '100%', height: 220, borderRadius: 16, backgroundColor: '#f0fdf4',
+  placeholder: { width: '100%', height: 220, borderRadius: 16, backgroundColor: '#F0FAF6',
                  justifyContent: 'center', alignItems: 'center', gap: 8 },
   icon:        { fontSize: 48 },
   buttons:     { flexDirection: 'row', gap: 12 },

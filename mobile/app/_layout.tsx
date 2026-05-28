@@ -7,7 +7,19 @@ import { supabase } from '../lib/supabase'
 
 const theme = {
   ...MD3LightTheme,
-  colors: { ...MD3LightTheme.colors, primary: '#2E7D32', secondaryContainer: '#dcfce7' },
+  colors: {
+    ...MD3LightTheme.colors,
+    primary:            '#0A362A',  // deep forest — primary brand
+    onPrimary:          '#FFFFFF',
+    primaryContainer:   '#D1FAE5',  // mint-100
+    secondary:          '#10B981',  // vibrant mint — accent
+    secondaryContainer: '#D1FAE5',
+    background:         '#F8FAF9',  // canvas
+    surface:            '#FFFFFF',
+    onBackground:       '#1E293B',
+    onSurface:          '#1E293B',
+    outline:            '#E2E8F0',
+  },
 }
 
 export default function RootLayout() {

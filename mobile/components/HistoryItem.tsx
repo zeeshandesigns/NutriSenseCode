@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
   row:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10,
                  borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e5e7eb' },
   thumb:       { width: 48, height: 48, borderRadius: 8 },
-  placeholder: { backgroundColor: '#f0fdf4', justifyContent: 'center', alignItems: 'center' },
+  placeholder: { backgroundColor: '#F0FAF6', justifyContent: 'center', alignItems: 'center' },
   info:        { flex: 1 },
   time:        { opacity: 0.4 },
 })

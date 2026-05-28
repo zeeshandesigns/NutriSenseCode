@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, justifyContent: 'center', gap: 16 },
   heading:   { textAlign: 'center', marginBottom: 4 },
   step:      { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 14,
-               backgroundColor: '#f0fdf4', borderRadius: 12 },
+               backgroundColor: '#F0FAF6', borderRadius: 12 },
   icon:      { fontSize: 30 },
   btn:       { marginTop: 8 },
 })

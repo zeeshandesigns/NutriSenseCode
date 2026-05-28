@@ -33,6 +33,6 @@ export default function NutritionGrid({ nutrition }: Props) {
 
 const styles = StyleSheet.create({
   grid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  cell:        { flex: 1, minWidth: '45%', backgroundColor: '#f0fdf4', borderRadius: 8, padding: 12, alignItems: 'center' },
+  cell:        { flex: 1, minWidth: '45%', backgroundColor: '#F0FAF6', borderRadius: 8, padding: 12, alignItems: 'center' },
   unavailable: { padding: 12, backgroundColor: '#f9fafb', borderRadius: 8, alignItems: 'center' },
 })

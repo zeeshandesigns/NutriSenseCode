@@ -19,7 +19,7 @@ export default function ConfirmScreen() {
         .from('profiles').select('goal').eq('id', user?.id ?? '').maybeSingle()
       const goal = (profile?.goal as string) ?? 'curious'
 
-      // Fetch fresh nutrition + insight for the user's chosen label
+      // Fetch fresh nutrition + insight for the user's chosen label.
       const fresh = await lookupLabel(choice.label, goal)
       const confirmed: ScanResult = {
         ...result,
@@ -28,13 +28,34 @@ export default function ConfirmScreen() {
         nutrition: fresh.nutrition,
         insight: fresh.insight,
       }
+
+      // Log the correction. The most recent scan row for this user is the
+      // one we just inserted at predict-time — patch it to mark the user's
+      // chosen label and preserve the model's original top-1 for retraining.
+      const originalTop1 = result.top_prediction.label
+      if (user && choice.label !== originalTop1) {
+        const { data: latest } = await supabase
+          .from('scans').select('id').eq('user_id', user.id)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle()
+        if (latest?.id) {
+          await supabase.from('scans').update({
+            food_label:     choice.label,
+            confidence:     choice.confidence,
+            nutrition:      fresh.nutrition,
+            insight:        fresh.insight,
+            user_corrected: true,
+            original_top1:  originalTop1,
+          }).eq('id', latest.id)
+        }
+      }
+
       router.replace({
         pathname: '/(tabs)/scan/result',
         params: { uri, result: JSON.stringify(confirmed) },
       })
     } catch (_) {
-      // Network failure — fall back to the original nutrition/insight so the
-      // user at least sees their chosen label, even if the data is stale.
+      // Network/database failure — fall back so the user at least sees
+      // their chosen label, even if the nutrition data is stale.
       const confirmed: ScanResult = { ...result, top_prediction: choice, low_confidence: false }
       router.replace({
         pathname: '/(tabs)/scan/result',

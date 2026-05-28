@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
                  paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8,
                  fontSize: 13, color: '#374151', textAlign: 'center' },
   bubble:      { maxWidth: '80%', padding: 12, borderRadius: 12, marginBottom: 8 },
-  userBubble:  { alignSelf: 'flex-end', backgroundColor: '#dcfce7' },
+  userBubble:  { alignSelf: 'flex-end', backgroundColor: '#D1FAE5' },
   aiBubble:    { alignSelf: 'flex-start', backgroundColor: '#f3f4f6' },
   inputRow:    { flexDirection: 'row', alignItems: 'center', padding: 8,
                  borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#e5e7eb' },

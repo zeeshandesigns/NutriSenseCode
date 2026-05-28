@@ -84,7 +84,7 @@ export default function InsightsScreen() {
               width={W - 64} height={160} yAxisLabel="" yAxisSuffix="x"
               chartConfig={{
                 backgroundGradientFrom: '#fff', backgroundGradientTo: '#fff',
-                color: () => '#2E7D32', labelColor: () => '#666',
+                color: () => '#0A362A', labelColor: () => '#475569',
               }}
               style={{ borderRadius: 8 }}
             />
