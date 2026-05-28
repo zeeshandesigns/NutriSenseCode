@@ -35,7 +35,7 @@ No manual entry. No calorie counting. No meal plans. Just snap → understand.
 ## Try it
 
 - **Live web app:** <https://nutrisenseai.tech>
-- **Android APK:** <https://expo.dev/artifacts/eas/kZ9qHcWgxjfN4SVicztphy.apk> — install directly on any Android phone
+- **Android APK:** <https://expo.dev/artifacts/eas/k36Pza7WFpTXqvo7H6zJJA.apk> — install directly on any Android phone
 - **Backend API:** <https://nutrisense-api.onrender.com/health>
 
 ## Screenshots

@@ -12,7 +12,7 @@ production URL is publicly accessible at submission time.
 | Web dashboard (vercel.app alias) | Vercel | <https://nutrisense-zynk-it.vercel.app> | Push to `main` |
 | **Backend API** | Render | <https://nutrisense-msq1.onrender.com> | Push to `main` |
 | Backend health endpoint | Render | <https://nutrisense-msq1.onrender.com/health> | — |
-| **Mobile APK (Android preview)** | EAS Build (Expo) | <https://expo.dev/artifacts/eas/kZ9qHcWgxjfN4SVicztphy.apk> | Manual `eas build` |
+| **Mobile APK (Android preview)** | EAS Build (Expo) | <https://expo.dev/artifacts/eas/k36Pza7WFpTXqvo7H6zJJA.apk> | Manual `eas build` |
 | **Database / Auth / Storage** | Supabase | qjbeiaadjpgrmllzazxe.supabase.co | n/a |
 | **Static CDN** (Grad-CAM PNGs) | Supabase Storage | …/storage/v1/object/public/gradcam/ | Manual upload script |
 | **ML training infra** | Modal | <https://modal.com/apps/zynk-system/main> | Manual `modal run` |
